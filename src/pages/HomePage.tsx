@@ -1,10 +1,8 @@
 import { ChevronRight } from 'lucide-react';
-import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 
 import { CircularGallery } from '../components/CircularGallery';
 import { assetPath } from '../lib/assets';
-import { useData } from '../lib/data';
 
 const slideshowImages = [
   { src: assetPath('slideshow/gallery-01.webp'), orientation: 'landscape' },
@@ -25,17 +23,6 @@ const slideshowImages = [
 ] as const;
 
 export const HomePage = () => {
-  const { products } = useData();
-  const galleryItems = useMemo(() => [
-    ...slideshowImages,
-    ...products.filter((product) => product.isAvailable).map((product) => ({
-      src: product.imageUrl,
-      orientation: 'square' as const,
-      productId: product.id,
-      label: product.name,
-    })),
-  ], [products]);
-
   return <div className="page home-page">
     <section className="hero-card">
       <div className="hero-title-wrap"><h1 className="hero-heading">BARMISAKI</h1></div>
@@ -44,6 +31,6 @@ export const HomePage = () => {
       <div className="hero-art" aria-hidden="true"><img className="hero-character" src={assetPath('hero/character-cutout.png')} alt="" /></div>
     </section>
 
-    <CircularGallery items={galleryItems} />
+    <CircularGallery items={slideshowImages} />
   </div>
 };

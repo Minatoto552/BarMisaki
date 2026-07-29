@@ -23,13 +23,14 @@ export const createLoopGeometry = (
   itemHeight: number,
   itemCount: number,
   gap = 24,
+  minimumPerimeterOverride?: number,
 ): LoopGeometry => {
-  const edgePadding = Math.max(10, Math.min(28, containerHeight * 0.04));
+  const edgePadding = 10;
   const topY = edgePadding + itemHeight / 2;
   const bottomY = containerHeight - edgePadding - itemHeight / 2;
   const verticalLength = Math.max(1, bottomY - topY);
   const minimumHorizontalLength = containerWidth + itemWidth * 2;
-  const requiredPerimeter = Math.max(1, itemCount) * (itemWidth + gap);
+  const requiredPerimeter = minimumPerimeterOverride ?? Math.max(1, itemCount) * (itemWidth + gap);
   const horizontalLength = Math.max(minimumHorizontalLength, (requiredPerimeter - verticalLength * 2) / 2);
   const leftX = (containerWidth - horizontalLength) / 2;
   return {

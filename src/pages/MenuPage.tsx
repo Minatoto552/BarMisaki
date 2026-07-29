@@ -1,6 +1,6 @@
 import { Check, ChevronRight, Search, ShoppingBag, Trash2 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import { Modal } from '../components/Modal';
 import { useData } from '../lib/data';
@@ -20,7 +20,6 @@ const ColorChoice = ({ value, selected, onClick, label }: { value: CocktailColor
 export const MenuPage = () => {
   const { profile, products, placeCart } = useData();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
   const [category, setCategory] = useState<ProductCategory>('normal_cocktail');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Product | null>(null);
@@ -40,25 +39,6 @@ export const MenuPage = () => {
   }, [products]);
 
   const visible = useMemo(() => menuProducts.filter((product) => product.category === category && product.isAvailable && product.name.toLowerCase().includes(search.trim().toLowerCase())), [category, menuProducts, search]);
-
-  useEffect(() => {
-    const productId = searchParams.get('product');
-    if (!productId) return;
-    const product = menuProducts.find((item) => item.id === productId && item.isAvailable);
-    if (!product) return;
-    const timer = window.setTimeout(() => {
-      setSearchParams({}, { replace: true });
-      if (!profile) {
-        navigate('/account', { state: { notice: '注文する前に、名前とアイコンを登録してください。' } });
-        return;
-      }
-      setSelected(product);
-      setOptions({});
-      setConfirming(product.category !== 'normal_cocktail');
-      setErrors([]);
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, [menuProducts, navigate, profile, searchParams, setSearchParams]);
 
   const openOrder = (product: Product) => {
     if (!profile) { navigate('/account', { state: { notice: '注文する前に、名前とアイコンを登録してください。' } }); return; }

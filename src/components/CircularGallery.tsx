@@ -1,13 +1,10 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { Link } from 'react-router-dom';
 
 import { createLoopGeometry, getLoopPoint } from '../lib/circular-path';
 
 export interface CircularGalleryItem {
   src: string;
   orientation: 'landscape' | 'portrait' | 'square';
-  productId?: string;
-  label?: string;
 }
 
 const CYCLE_MS = 36_000;
@@ -25,12 +22,21 @@ export const CircularGallery = ({ items }: { items: readonly CircularGalleryItem
 
     let animationFrame = 0;
     let geometry = createLoopGeometry(1, 1, 1, 1, nodes.length);
+    let itemOffsets = nodes.map((_, index) => index / nodes.length);
     const measure = () => {
       const stageRect = stage.getBoundingClientRect();
       const cardRects = nodes.map((node) => node.getBoundingClientRect());
       const itemWidth = Math.max(...cardRects.map((rect) => rect.width));
       const itemHeight = Math.max(...cardRects.map((rect) => rect.height));
-      geometry = createLoopGeometry(stageRect.width, stageRect.height, itemWidth, itemHeight, nodes.length);
+      const totalCardWidth = cardRects.reduce((sum, rect) => sum + rect.width, 0);
+      geometry = createLoopGeometry(stageRect.width, stageRect.height, itemWidth, itemHeight, nodes.length, 24, totalCardWidth + nodes.length * 24);
+      const distributedGap = (geometry.perimeter - totalCardWidth) / nodes.length;
+      let cursor = 0;
+      itemOffsets = cardRects.map((rect) => {
+        const centerOffset = cursor + rect.width / 2;
+        cursor += rect.width + distributedGap;
+        return centerOffset / geometry.perimeter;
+      });
       stage.dataset.perimeter = geometry.perimeter.toFixed(2);
       stage.dataset.cycleMs = String(CYCLE_MS);
     };
@@ -40,7 +46,7 @@ export const CircularGallery = ({ items }: { items: readonly CircularGalleryItem
     const animate = (now: number) => {
       const baseProgress = ((now - (startTimeRef.current ?? now)) % CYCLE_MS) / CYCLE_MS;
       nodes.forEach((node, index) => {
-        const progress = (baseProgress + index / nodes.length) % 1;
+        const progress = (baseProgress + itemOffsets[index]) % 1;
         const point = getLoopPoint(progress, geometry);
         const width = node.offsetWidth;
         const height = node.offsetHeight;
@@ -61,20 +67,9 @@ export const CircularGallery = ({ items }: { items: readonly CircularGalleryItem
   }, [uniqueItems]);
 
   return (
-    <section className="circular-gallery" aria-label="BarMisakiギャラリー">
-      <div className="circular-gallery-heading"><span>BAR MISAKI GALLERY</span><b>ONE CONTINUOUS LOOP</b></div>
+    <section className="menu-marquee circular-gallery" aria-label="BarMisakiギャラリー">
       <div className="circular-gallery-stage" ref={stageRef}>
-        {uniqueItems.map((item, index) => {
-          const className = `circular-gallery-item ${item.orientation}${item.productId ? ' product-slide' : ''}`;
-          const image = <img src={item.src} alt={item.label ?? `BarMisaki ギャラリー ${index + 1}`} loading="lazy" />;
-          return item.productId ? (
-            <Link className={className} key={item.src} ref={(node) => { itemRefs.current[index] = node; }} to={`/menu?product=${encodeURIComponent(item.productId)}`} aria-label={`${item.label}を注文する`}>
-              {image}<span>ORDER THIS ITEM</span>
-            </Link>
-          ) : (
-            <figure className={className} key={item.src} ref={(node) => { itemRefs.current[index] = node; }}>{image}</figure>
-          );
-        })}
+        {uniqueItems.map((item, index) => <figure className={`circular-gallery-item ${item.orientation}`} key={item.src} ref={(node) => { itemRefs.current[index] = node; }}><img src={item.src} alt={`BarMisaki ギャラリー ${index + 1}`} loading="lazy" /></figure>)}
       </div>
       <div className="circular-gallery-edge circular-gallery-edge-left" aria-hidden="true" />
       <div className="circular-gallery-edge circular-gallery-edge-right" aria-hidden="true" />
