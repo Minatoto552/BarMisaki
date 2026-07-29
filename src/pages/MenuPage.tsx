@@ -3,7 +3,6 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { Modal } from '../components/Modal';
-import { assetPath } from '../lib/assets';
 import { useData } from '../lib/data';
 import { builtInNormalCocktail } from '../lib/sample-data';
 import { validateOrderOptions, validateTableNumber } from '../lib/validation';
@@ -17,30 +16,6 @@ const ColorChoice = ({ value, selected, onClick, label }: { value: CocktailColor
     <span /><b>{colorLabels[value]}</b><small>{label}</small>{selected && <Check />}
   </button>
 );
-
-const slideshowImages = [
-  { src: assetPath('slideshow/gallery-01.webp'), orientation: 'landscape' },
-  { src: assetPath('slideshow/gallery-02.webp'), orientation: 'landscape' },
-  { src: assetPath('slideshow/gallery-03.webp'), orientation: 'portrait' },
-  { src: assetPath('slideshow/gallery-04.webp'), orientation: 'portrait' },
-  { src: assetPath('slideshow/gallery-05.webp'), orientation: 'portrait' },
-  { src: assetPath('slideshow/gallery-06.webp'), orientation: 'portrait' },
-  { src: assetPath('slideshow/gallery-07.webp'), orientation: 'portrait' },
-  { src: assetPath('slideshow/gallery-08.webp'), orientation: 'portrait' },
-  { src: assetPath('slideshow/gallery-10.webp'), orientation: 'portrait' },
-  { src: assetPath('slideshow/gallery-11.webp'), orientation: 'portrait' },
-  { src: assetPath('slideshow/gallery-12.webp'), orientation: 'landscape' },
-  { src: assetPath('slideshow/gallery-13.webp'), orientation: 'landscape' },
-  { src: assetPath('slideshow/gallery-14.webp'), orientation: 'landscape' },
-  { src: assetPath('slideshow/gallery-15.webp'), orientation: 'square' },
-  { src: assetPath('slideshow/gallery-16.webp'), orientation: 'portrait' },
-] as const;
-
-const uniqueSlideshowImages = slideshowImages.filter((image, index, images) => images.findIndex((candidate) => candidate.src === image.src) === index);
-const lowerStart = Math.ceil(uniqueSlideshowImages.length / 2);
-const lowerSlideshowImages = [...uniqueSlideshowImages.slice(lowerStart), ...uniqueSlideshowImages.slice(0, lowerStart)];
-const upperSlideshowLoop = [...uniqueSlideshowImages, ...uniqueSlideshowImages];
-const lowerSlideshowLoop = [...lowerSlideshowImages, ...lowerSlideshowImages];
 
 export const MenuPage = () => {
   const { profile, products, placeCart } = useData();
@@ -112,18 +87,6 @@ export const MenuPage = () => {
 
   return (
     <div className="page menu-page">
-      <section className="hero-card">
-        <div className="hero-title-wrap"><h1 className="hero-heading">BARMISAKI</h1></div>
-        <div className="hero-copy"><span className="eyebrow light">REALTIME ORDER EXPERIENCE</span><p>好きな一杯を選んでカートへ。<br />テーブルからまとめて注文できます。</p></div>
-        <button className="hero-order-button" type="button" onClick={() => document.querySelector('.menu-section')?.scrollIntoView({ behavior: 'smooth' })}>メニューを見る<ChevronRight /></button>
-        <div className="hero-art" aria-hidden="true"><img className="hero-character" src={assetPath('hero/character-cutout.png')} alt="" /></div>
-      </section>
-
-      <section className="menu-marquee" aria-label="BarMisakiギャラリー">
-        <div className="marquee-track marquee-forward" aria-hidden="true">{upperSlideshowLoop.map((image, index) => <figure className={`marquee-slide ${image.orientation}`} key={`upper-${image.src}-${index}`}><img src={image.src} alt="" loading="lazy" /></figure>)}</div>
-        <div className="marquee-track marquee-backward" aria-hidden="true">{lowerSlideshowLoop.map((image, index) => <figure className={`marquee-slide ${image.orientation}`} key={`lower-${image.src}-${index}`}><img src={image.src} alt="" loading="lazy" /></figure>)}</div>
-      </section>
-
       <section className="menu-section">
         <div className="section-title-row"><div><span className="eyebrow">ORDER MENU</span><h2>MENU</h2><p>商品を選択し、カートからまとめて注文。</p></div><label className="search-box"><Search /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="商品を検索" /></label></div>
         <div className="tab-list" role="tablist" aria-label="商品カテゴリー">

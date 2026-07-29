@@ -301,7 +301,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       const orderRef = doc(firebaseServices.db, 'orders', id);
       if ((await getDoc(orderRef)).exists()) await updateDoc(orderRef, { status, updatedAt });
     } else {
-      writeJson(KEYS.orders, orders.map((item) => item.id === id ? { ...item, status, updatedAt } : item));
+      const currentOrders = readJson<Order[]>(KEYS.orders, orders);
+      writeJson(KEYS.orders, currentOrders.map((item) => item.id === id ? { ...item, status, updatedAt } : item));
     }
   }, [orders]);
 

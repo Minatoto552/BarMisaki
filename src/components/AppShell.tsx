@@ -1,11 +1,12 @@
-import { CircleUserRound, ClipboardList, Coffee, Plus, Radio } from 'lucide-react';
+import { CircleUserRound, ClipboardList, Coffee, House, Plus, Radio } from 'lucide-react';
 import { NavLink, Outlet } from 'react-router-dom';
 
 import { useData } from '../lib/data';
 import { EmergencySystem } from './EmergencySystem';
 
 const links = [
-  { to: '/', label: 'メニュー', icon: Coffee, end: true },
+  { to: '/', label: 'ホーム', icon: House, end: true },
+  { to: '/menu', label: '注文', icon: Coffee },
   { to: '/orders', label: '注文管理', icon: ClipboardList },
   { to: '/add', label: '商品追加', icon: Plus },
   { to: '/account', label: 'アカウント', icon: CircleUserRound },
