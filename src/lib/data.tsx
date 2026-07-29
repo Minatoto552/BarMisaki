@@ -164,8 +164,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         setUser(nextUser);
         setIsStaff(true);
       } else {
-        void signInAnonymously(firebaseServices.auth!).catch(() => {
-          setError('匿名ログインに失敗しました。Firebase Authenticationの匿名認証を確認してください。');
+        void signInAnonymously(firebaseServices.auth!).catch((reason: unknown) => {
+          const detail = reason instanceof Error ? reason.message : String(reason);
+          setError(`匿名ログインに失敗しました。${detail}`);
           setReady(true);
         });
       }
