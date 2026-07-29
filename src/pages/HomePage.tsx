@@ -1,7 +1,10 @@
 import { ChevronRight } from 'lucide-react';
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 
+import { CircularGallery } from '../components/CircularGallery';
 import { assetPath } from '../lib/assets';
+import { useData } from '../lib/data';
 
 const slideshowImages = [
   { src: assetPath('slideshow/gallery-01.webp'), orientation: 'landscape' },
@@ -21,14 +24,19 @@ const slideshowImages = [
   { src: assetPath('slideshow/gallery-16.webp'), orientation: 'portrait' },
 ] as const;
 
-const uniqueImages = slideshowImages.filter((image, index, images) => images.findIndex((candidate) => candidate.src === image.src) === index);
-const lowerStart = Math.ceil(uniqueImages.length / 2);
-const lowerImages = [...uniqueImages.slice(lowerStart), ...uniqueImages.slice(0, lowerStart)];
-const upperLoop = [...uniqueImages, ...uniqueImages];
-const lowerLoop = [...lowerImages, ...lowerImages];
+export const HomePage = () => {
+  const { products } = useData();
+  const galleryItems = useMemo(() => [
+    ...slideshowImages,
+    ...products.filter((product) => product.isAvailable).map((product) => ({
+      src: product.imageUrl,
+      orientation: 'square' as const,
+      productId: product.id,
+      label: product.name,
+    })),
+  ], [products]);
 
-export const HomePage = () => (
-  <div className="page home-page">
+  return <div className="page home-page">
     <section className="hero-card">
       <div className="hero-title-wrap"><h1 className="hero-heading">BARMISAKI</h1></div>
       <div className="hero-copy"><span className="eyebrow light">REALTIME ORDER EXPERIENCE</span><p>好きな一杯を選んでカートへ。<br />テーブルからまとめて注文できます。</p></div>
@@ -36,9 +44,6 @@ export const HomePage = () => (
       <div className="hero-art" aria-hidden="true"><img className="hero-character" src={assetPath('hero/character-cutout.png')} alt="" /></div>
     </section>
 
-    <section className="menu-marquee" aria-label="BarMisakiギャラリー">
-      <div className="marquee-track marquee-forward" aria-hidden="true">{upperLoop.map((image, index) => <figure className={`marquee-slide ${image.orientation}`} key={`upper-${image.src}-${index}`}><img src={image.src} alt="" loading="lazy" /></figure>)}</div>
-      <div className="marquee-track marquee-backward" aria-hidden="true">{lowerLoop.map((image, index) => <figure className={`marquee-slide ${image.orientation}`} key={`lower-${image.src}-${index}`}><img src={image.src} alt="" loading="lazy" /></figure>)}</div>
-    </section>
+    <CircularGallery items={galleryItems} />
   </div>
-);
+};
