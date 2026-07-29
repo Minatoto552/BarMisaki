@@ -3,7 +3,9 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { Modal } from '../components/Modal';
+import { assetPath } from '../lib/assets';
 import { useData } from '../lib/data';
+import { builtInNormalCocktail } from '../lib/sample-data';
 import { validateOrderOptions, validateTableNumber } from '../lib/validation';
 import {
   categoryLabels, cocktailColors, colorLabels, productCategories,
@@ -17,21 +19,21 @@ const ColorChoice = ({ value, selected, onClick, label }: { value: CocktailColor
 );
 
 const slideshowImages = [
-  { src: '/slideshow/gallery-01.webp', orientation: 'landscape' },
-  { src: '/slideshow/gallery-02.webp', orientation: 'landscape' },
-  { src: '/slideshow/gallery-03.webp', orientation: 'portrait' },
-  { src: '/slideshow/gallery-04.webp', orientation: 'portrait' },
-  { src: '/slideshow/gallery-05.webp', orientation: 'portrait' },
-  { src: '/slideshow/gallery-06.webp', orientation: 'portrait' },
-  { src: '/slideshow/gallery-07.webp', orientation: 'portrait' },
-  { src: '/slideshow/gallery-08.webp', orientation: 'portrait' },
-  { src: '/slideshow/gallery-10.webp', orientation: 'portrait' },
-  { src: '/slideshow/gallery-11.webp', orientation: 'portrait' },
-  { src: '/slideshow/gallery-12.webp', orientation: 'landscape' },
-  { src: '/slideshow/gallery-13.webp', orientation: 'landscape' },
-  { src: '/slideshow/gallery-14.webp', orientation: 'landscape' },
-  { src: '/slideshow/gallery-15.webp', orientation: 'square' },
-  { src: '/slideshow/gallery-16.webp', orientation: 'portrait' },
+  { src: assetPath('slideshow/gallery-01.webp'), orientation: 'landscape' },
+  { src: assetPath('slideshow/gallery-02.webp'), orientation: 'landscape' },
+  { src: assetPath('slideshow/gallery-03.webp'), orientation: 'portrait' },
+  { src: assetPath('slideshow/gallery-04.webp'), orientation: 'portrait' },
+  { src: assetPath('slideshow/gallery-05.webp'), orientation: 'portrait' },
+  { src: assetPath('slideshow/gallery-06.webp'), orientation: 'portrait' },
+  { src: assetPath('slideshow/gallery-07.webp'), orientation: 'portrait' },
+  { src: assetPath('slideshow/gallery-08.webp'), orientation: 'portrait' },
+  { src: assetPath('slideshow/gallery-10.webp'), orientation: 'portrait' },
+  { src: assetPath('slideshow/gallery-11.webp'), orientation: 'portrait' },
+  { src: assetPath('slideshow/gallery-12.webp'), orientation: 'landscape' },
+  { src: assetPath('slideshow/gallery-13.webp'), orientation: 'landscape' },
+  { src: assetPath('slideshow/gallery-14.webp'), orientation: 'landscape' },
+  { src: assetPath('slideshow/gallery-15.webp'), orientation: 'square' },
+  { src: assetPath('slideshow/gallery-16.webp'), orientation: 'portrait' },
 ] as const;
 
 const uniqueSlideshowImages = slideshowImages.filter((image, index, images) => images.findIndex((candidate) => candidate.src === image.src) === index);
@@ -56,7 +58,12 @@ export const MenuPage = () => {
   const [receiptNumber, setReceiptNumber] = useState<string | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
 
-  const visible = useMemo(() => products.filter((product) => product.category === category && product.isAvailable && product.name.toLowerCase().includes(search.trim().toLowerCase())), [category, products, search]);
+  const menuProducts = useMemo(() => {
+    const hasNormalCocktail = products.some((product) => product.category === 'normal_cocktail' && product.isAvailable);
+    return hasNormalCocktail ? products : [builtInNormalCocktail, ...products];
+  }, [products]);
+
+  const visible = useMemo(() => menuProducts.filter((product) => product.category === category && product.isAvailable && product.name.toLowerCase().includes(search.trim().toLowerCase())), [category, menuProducts, search]);
 
   const openOrder = (product: Product) => {
     if (!profile) { navigate('/account', { state: { notice: '注文する前に、名前とアイコンを登録してください。' } }); return; }
@@ -109,7 +116,7 @@ export const MenuPage = () => {
         <div className="hero-title-wrap"><h1 className="hero-heading">BARMISAKI</h1></div>
         <div className="hero-copy"><span className="eyebrow light">REALTIME ORDER EXPERIENCE</span><p>好きな一杯を選んでカートへ。<br />テーブルからまとめて注文できます。</p></div>
         <button className="hero-order-button" type="button" onClick={() => document.querySelector('.menu-section')?.scrollIntoView({ behavior: 'smooth' })}>メニューを見る<ChevronRight /></button>
-        <div className="hero-art" aria-hidden="true"><img className="hero-character" src="/hero/character-cutout.png" alt="" /></div>
+        <div className="hero-art" aria-hidden="true"><img className="hero-character" src={assetPath('hero/character-cutout.png')} alt="" /></div>
       </section>
 
       <section className="menu-marquee" aria-label="BarMisakiギャラリー">
@@ -120,7 +127,7 @@ export const MenuPage = () => {
       <section className="menu-section">
         <div className="section-title-row"><div><span className="eyebrow">ORDER MENU</span><h2>MENU</h2><p>商品を選択し、カートからまとめて注文。</p></div><label className="search-box"><Search /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="商品を検索" /></label></div>
         <div className="tab-list" role="tablist" aria-label="商品カテゴリー">
-          {productCategories.map((value) => <button role="tab" aria-selected={category === value} className={category === value ? 'active' : ''} key={value} onClick={() => setCategory(value)}>{categoryLabels[value]}<span>{products.filter((item) => item.category === value && item.isAvailable).length}</span></button>)}
+          {productCategories.map((value) => <button role="tab" aria-selected={category === value} className={category === value ? 'active' : ''} key={value} onClick={() => setCategory(value)}>{categoryLabels[value]}<span>{menuProducts.filter((item) => item.category === value && item.isAvailable).length}</span></button>)}
         </div>
 
         {visible.length ? <div className="product-grid">{visible.map((product) => product.category === 'normal_cocktail' ? (

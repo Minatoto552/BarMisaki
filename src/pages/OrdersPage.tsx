@@ -1,8 +1,9 @@
 import { AlertTriangle, BellRing, CheckCircle2, ChefHat, Clock3, Eye, Radio, ShieldCheck, UserRound } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { Modal } from '../components/Modal';
 import { useData } from '../lib/data';
+import { getCurrentServiceDayStart } from '../lib/service-day';
 import {
   categoryLabels, colorLabels, emergencyKindLabels, orderStatusLabels, orderStatuses,
   type Emergency, type Order, type OrderStatus,
@@ -17,7 +18,13 @@ export const OrdersPage = () => {
   const [filter, setFilter] = useState<StatusFilter>('all');
   const [recipeOrder, setRecipeOrder] = useState<Order | null>(null);
   const [emergencyDetail, setEmergencyDetail] = useState<Emergency | null>(null);
-  const baseOrders = isStaff ? orders : orders.filter((order) => order.orderedBy === uid);
+  const [serviceDayStart, setServiceDayStart] = useState(() => getCurrentServiceDayStart());
+  useEffect(() => {
+    const timer = window.setInterval(() => setServiceDayStart(getCurrentServiceDayStart()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const baseOrders = useMemo(() => (isStaff ? orders : orders.filter((order) => order.orderedBy === uid))
+    .filter((order) => new Date(order.createdAt).getTime() >= serviceDayStart), [isStaff, orders, serviceDayStart, uid]);
   const visible = useMemo(() => baseOrders.filter((order) => filter === 'all' || order.status === filter), [baseOrders, filter]);
   const activeEmergency = emergencies.filter((item) => item.status !== 'resolved');
   const counts: Record<StatusFilter, number> = {
@@ -37,7 +44,7 @@ export const OrdersPage = () => {
       </section>}
 
       <section className="orders-board">
-        <div className="orders-toolbar"><div className="status-tabs">{(['all', ...orderStatuses] as StatusFilter[]).map((status) => <button type="button" key={status} className={filter === status ? 'active' : ''} onClick={() => setFilter(status)}>{status === 'all' ? 'すべて' : orderStatusLabels[status]}<span>{counts[status]}</span></button>)}</div><p>新しい注文順</p></div>
+        <div className="orders-toolbar"><div className="status-tabs">{(['all', ...orderStatuses] as StatusFilter[]).map((status) => <button type="button" key={status} className={filter === status ? 'active' : ''} onClick={() => setFilter(status)}>{status === 'all' ? 'すべて' : orderStatusLabels[status]}<span>{counts[status]}</span></button>)}</div><p>毎日 午前5時に履歴をリセット</p></div>
         {visible.length ? <div className="order-list">{visible.map((order) => <OrderTicket key={order.id} order={order} isStaff={isStaff} onStatus={(status) => void updateOrder(order.id, status)} onRecipe={() => setRecipeOrder(order)} />)}</div> : <div className="empty-state"><div className="empty-icon"><ChefHat /></div><h3>該当する注文はありません</h3><p>新しい注文が入ると、ここへ自動で表示されます。</p></div>}
       </section>
 
