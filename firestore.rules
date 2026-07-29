@@ -1,0 +1,89 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function staff() { return signedIn(); }
+    function shortString(value, max) { return value is string && value.size() > 0 && value.size() <= max; }
+    function profileExists() { return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)); }
+
+    match /users/{uid} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['id', 'displayName', 'iconUrl', 'createdAt', 'updatedAt'])
+        && request.resource.data.id == uid
+        && shortString(request.resource.data.displayName, 32)
+        && shortString(request.resource.data.iconUrl, 320000);
+      allow update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['id', 'displayName', 'iconUrl', 'createdAt', 'updatedAt'])
+        && request.resource.data.id == uid
+        && request.resource.data.createdAt == resource.data.createdAt
+        && shortString(request.resource.data.displayName, 32)
+        && shortString(request.resource.data.iconUrl, 320000);
+      allow delete: if false;
+    }
+
+    match /products/{productId} {
+      allow read: if true;
+      allow create: if profileExists()
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.category in ['normal_cocktail', 'original_cocktail', 'juice', 'food']
+        && shortString(request.resource.data.name, 60)
+        && shortString(request.resource.data.imageUrl, 320000)
+        && request.resource.data.isAvailable is bool
+        && (
+          (request.resource.data.category == 'original_cocktail'
+            && request.resource.data.keys().hasOnly(['name', 'imageUrl', 'category', 'recipe', 'createdBy', 'creatorName', 'isAvailable', 'createdAt', 'updatedAt'])
+            && shortString(request.resource.data.recipe, 2000))
+          || (request.resource.data.category != 'original_cocktail'
+            && request.resource.data.keys().hasOnly(['name', 'imageUrl', 'category', 'createdBy', 'creatorName', 'isAvailable', 'createdAt', 'updatedAt']))
+        );
+      allow update: if signedIn() && (resource.data.createdBy == request.auth.uid || staff())
+        && request.resource.data.createdBy == resource.data.createdBy;
+      allow delete: if signedIn() && (resource.data.createdBy == request.auth.uid || staff());
+    }
+
+    match /orders/{orderId} {
+      allow read: if signedIn() && (resource.data.orderedBy == request.auth.uid || staff());
+      allow create: if profileExists()
+        && request.resource.data.orderedBy == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && shortString(request.resource.data.cartId, 80)
+        && shortString(request.resource.data.tableNumber, 12)
+        && request.resource.data.category in ['normal_cocktail', 'original_cocktail', 'juice', 'food']
+        && shortString(request.resource.data.productName, 60)
+        && (
+          (request.resource.data.category == 'normal_cocktail'
+            && request.resource.data.keys().hasOnly(['receiptNumber', 'cartId', 'tableNumber', 'productId', 'productName', 'productImageUrl', 'category', 'orderedBy', 'ordererName', 'status', 'createdAt', 'updatedAt', 'color1', 'color2', 'carbonated', 'aphrodisiac'])
+            && request.resource.data.color1 in ['red', 'blue', 'green', 'white', 'black']
+            && request.resource.data.color2 in ['red', 'blue', 'green', 'white', 'black']
+            && request.resource.data.carbonated is bool && request.resource.data.aphrodisiac is bool)
+          || (request.resource.data.category == 'original_cocktail'
+            && request.resource.data.keys().hasOnly(['receiptNumber', 'cartId', 'tableNumber', 'productId', 'productName', 'productImageUrl', 'category', 'orderedBy', 'ordererName', 'status', 'createdAt', 'updatedAt', 'recipe'])
+            && shortString(request.resource.data.recipe, 2000))
+          || (request.resource.data.category in ['juice', 'food']
+            && request.resource.data.keys().hasOnly(['receiptNumber', 'cartId', 'tableNumber', 'productId', 'productName', 'productImageUrl', 'category', 'orderedBy', 'ordererName', 'status', 'createdAt', 'updatedAt']))
+        );
+      allow update: if staff()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
+        && request.resource.data.status in ['pending', 'preparing', 'completed'];
+      allow delete: if false;
+    }
+
+    match /emergencies/{emergencyId} {
+      allow read: if signedIn();
+      allow create: if profileExists()
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.kind in ['help', 'medical', 'trouble', 'other']
+        && request.resource.data.message is string && request.resource.data.message.size() <= 200
+        && request.resource.data.status == 'active'
+        && request.resource.data.keys().hasOnly(['kind', 'message', 'createdBy', 'creatorName', 'creatorIconUrl', 'status', 'createdAt', 'updatedAt']);
+      allow update: if staff()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
+        && request.resource.data.status in ['active', 'acknowledged', 'resolved'];
+      allow delete: if false;
+    }
+
+    match /{document=**} { allow read, write: if false; }
+  }
+}
