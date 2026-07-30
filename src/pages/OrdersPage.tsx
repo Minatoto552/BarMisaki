@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { Modal } from '../components/Modal';
 import { useData } from '../lib/data';
-import { groupOrdersByCart, type OrderGroup } from '../lib/order-groups';
+import { groupOrdersByCart, matchesOrderGroupFilter, type OrderGroup } from '../lib/order-groups';
 import { getCurrentServiceDayStart } from '../lib/service-day';
 import {
   categoryLabels, colorLabels, emergencyKindLabels, orderStatusLabels, orderStatuses,
@@ -27,10 +27,10 @@ export const OrdersPage = () => {
   const baseOrders = useMemo(() => (isStaff ? orders : orders.filter((order) => order.orderedBy === uid))
     .filter((order) => new Date(order.createdAt).getTime() >= serviceDayStart), [isStaff, orders, serviceDayStart, uid]);
   const orderGroups = useMemo(() => groupOrdersByCart(baseOrders), [baseOrders]);
-  const visible = useMemo(() => orderGroups.filter((group) => filter === 'all' || group.status === filter), [filter, orderGroups]);
+  const visible = useMemo(() => orderGroups.filter((group) => matchesOrderGroupFilter(group.status, filter)), [filter, orderGroups]);
   const activeEmergency = emergencies.filter((item) => item.status !== 'resolved');
   const counts: Record<StatusFilter, number> = {
-    all: orderGroups.length,
+    all: orderGroups.filter((item) => item.status !== 'completed').length,
     pending: orderGroups.filter((item) => item.status === 'pending').length,
     preparing: orderGroups.filter((item) => item.status === 'preparing').length,
     completed: orderGroups.filter((item) => item.status === 'completed').length,

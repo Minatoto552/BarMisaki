@@ -10,6 +10,12 @@ export interface OrderGroup {
   status: OrderStatus;
 }
 
+export type OrderGroupFilter = 'all' | OrderStatus;
+
+export const matchesOrderGroupFilter = (status: OrderStatus, filter: OrderGroupFilter) => (
+  filter === 'all' ? status !== 'completed' : status === filter
+);
+
 export const getOrderGroupStatus = (orders: Order[]): OrderStatus => {
   if (orders.some((order) => order.status === 'pending')) return 'pending';
   if (orders.some((order) => order.status === 'preparing')) return 'preparing';

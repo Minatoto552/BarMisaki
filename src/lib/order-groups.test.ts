@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Order } from '../types';
-import { getOrderGroupStatus, groupOrdersByCart } from './order-groups';
+import { getOrderGroupStatus, groupOrdersByCart, matchesOrderGroupFilter } from './order-groups';
 
 const makeOrder = (id: string, cartId: string, status: Order['status'], createdAt: string): Order => ({
   id, cartId, status, createdAt, updatedAt: createdAt, receiptNumber: cartId, tableNumber: '1', orderedBy: 'user-1', ordererName: 'みさき',
@@ -31,5 +31,17 @@ describe('groupOrdersByCart', () => {
       makeOrder('1', '100', 'completed', '2026-07-30T10:00:00.000Z'),
       makeOrder('2', '100', 'completed', '2026-07-30T10:00:01.000Z'),
     ])).toBe('completed');
+  });
+});
+
+describe('matchesOrderGroupFilter', () => {
+  it('すべてでは未対応と対応中だけを表示する', () => {
+    expect(matchesOrderGroupFilter('pending', 'all')).toBe(true);
+    expect(matchesOrderGroupFilter('preparing', 'all')).toBe(true);
+    expect(matchesOrderGroupFilter('completed', 'all')).toBe(false);
+  });
+
+  it('完了タブでは完了済みを表示する', () => {
+    expect(matchesOrderGroupFilter('completed', 'completed')).toBe(true);
   });
 });
