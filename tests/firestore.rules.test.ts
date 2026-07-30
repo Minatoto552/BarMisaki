@@ -97,4 +97,19 @@ describe('Firestore Security Rules', () => {
     await assertSucceeds(addDoc(collection(alice, 'emergencies'), alert));
     await assertFails(addDoc(collection(bob, 'emergencies'), { ...alert, createdBy: 'bob' }));
   });
+
+  it('お知らせは登録済みユーザーだけが正しいカテゴリーで作成できる', async () => {
+    await environment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'users/alice'), profile('alice'));
+    });
+    const alice = environment.authenticatedContext('alice').firestore();
+    const bob = environment.authenticatedContext('bob').firestore();
+    const announcement = {
+      kind: 'notice', message: 'ラストオーダーは4時です', createdBy: 'alice', creatorName: 'テストユーザー',
+      createdAt: timestamp, updatedAt: timestamp,
+    };
+    await assertSucceeds(addDoc(collection(alice, 'announcements'), announcement));
+    await assertFails(addDoc(collection(alice, 'announcements'), { ...announcement, kind: 'unknown' }));
+    await assertFails(addDoc(collection(bob, 'announcements'), { ...announcement, createdBy: 'bob' }));
+  });
 });

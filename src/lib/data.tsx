@@ -41,6 +41,8 @@ import type {
   FoodOrder,
   UserProfile,
   CartItem,
+  Announcement,
+  AnnouncementKind,
 } from '../types';
 import { firebaseServices, runtimeMode } from './firebase';
 import { sampleProducts } from './sample-data';
@@ -63,12 +65,14 @@ interface DataContextValue {
   products: Product[];
   orders: Order[];
   emergencies: Emergency[];
+  announcements: Announcement[];
   isStaff: boolean;
   runtimeMode: typeof runtimeMode;
   saveProfile: (displayName: string, image: File) => Promise<void>;
   addProduct: (draft: ProductDraft) => Promise<void>;
   placeCart: (items: CartItem[], tableNumber: string) => Promise<string>;
   sendEmergency: (kind: EmergencyKind, message: string) => Promise<void>;
+  sendAnnouncement: (kind: AnnouncementKind, message: string) => Promise<void>;
   updateEmergency: (id: string, status: EmergencyStatus) => Promise<void>;
   updateOrder: (id: string, status: OrderStatus) => Promise<void>;
 }
@@ -77,7 +81,7 @@ const DataContext = createContext<DataContextValue | null>(null);
 const LOCAL_EVENT = 'vrc-order-local-data';
 const KEYS = {
   uid: 'vrc-order-uid', profile: 'vrc-order-profile', products: 'vrc-order-products',
-  orders: 'vrc-order-orders', emergencies: 'vrc-order-emergencies',
+  orders: 'vrc-order-orders', emergencies: 'vrc-order-emergencies', announcements: 'vrc-order-announcements',
 } as const;
 
 const readJson = <T,>(key: string, fallback: T): T => {
@@ -140,6 +144,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const [products, setProducts] = useState<Product[]>(() => readJson(KEYS.products, sampleProducts));
   const [orders, setOrders] = useState<Order[]>(() => readJson(KEYS.orders, []));
   const [emergencies, setEmergencies] = useState<Emergency[]>(() => readJson(KEYS.emergencies, []));
+  const [announcements, setAnnouncements] = useState<Announcement[]>(() => readJson(KEYS.announcements, []));
   const [isStaff, setIsStaff] = useState(true);
   const lastMutation = useRef(0);
 
@@ -150,6 +155,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         setProducts(readJson(KEYS.products, sampleProducts));
         setOrders(readJson(KEYS.orders, []));
         setEmergencies(readJson(KEYS.emergencies, []));
+        setAnnouncements(readJson(KEYS.announcements, []));
       };
       window.addEventListener(LOCAL_EVENT, syncLocal);
       window.addEventListener('storage', syncLocal);
@@ -189,6 +195,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       }),
       onSnapshot(query(collection(db, 'emergencies'), orderBy('createdAt', 'desc')), (snapshot) => {
         setEmergencies(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as Emergency));
+      }),
+      onSnapshot(query(collection(db, 'announcements'), orderBy('createdAt', 'desc')), (snapshot) => {
+        setAnnouncements(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as Announcement));
       }),
     ];
     return () => unsubscribers.forEach((unsubscribe) => unsubscribe());
@@ -251,7 +260,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const timestamp = nowIso();
     const receiptNumber = `${Date.now().toString().slice(-4)}${Math.floor(Math.random() * 10)}`;
     const cartId = makeId();
-    const nextOrders = items.map(({ product, options }): OrderWithoutId => {
+    const nextOrders = items.flatMap(({ product, options, quantity }) => Array.from({ length: quantity }, (): OrderWithoutId => {
       const base = {
         receiptNumber, cartId, tableNumber: tableNumber.trim(),
         productId: product.id, productName: product.name, productImageUrl: product.imageUrl,
@@ -266,7 +275,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       }
       if (product.category === 'original_cocktail') return { ...base, category: product.category, recipe: product.recipe };
       return { ...base, category: product.category };
-    });
+    }));
     if (firebaseServices.db) {
       const batch = writeBatch(firebaseServices.db);
       nextOrders.forEach((next) => batch.set(doc(collection(firebaseServices.db!, 'orders')), next));
@@ -289,6 +298,19 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     else writeJson(KEYS.emergencies, [{ id: makeId(), ...next }, ...emergencies]);
   }, [emergencies, requireProfile]);
 
+  const sendAnnouncement = useCallback(async (kind: AnnouncementKind, message: string) => {
+    throttle();
+    const current = requireProfile();
+    const timestamp = nowIso();
+    const next: Omit<Announcement, 'id'> = {
+      kind, message: message.trim(), createdBy: current.id, creatorName: current.displayName,
+      createdAt: timestamp, updatedAt: timestamp,
+    };
+    if (!next.message || next.message.length > 300) throw new Error('お知らせは1〜300文字で入力してください。');
+    if (firebaseServices.db) await addDoc(collection(firebaseServices.db, 'announcements'), next);
+    else writeJson(KEYS.announcements, [{ id: makeId(), ...next }, ...announcements]);
+  }, [announcements, requireProfile]);
+
   const updateEmergency = useCallback(async (id: string, status: EmergencyStatus) => {
     const updatedAt = nowIso();
     if (firebaseServices.db) await updateDoc(doc(firebaseServices.db, 'emergencies', id), { status, updatedAt });
@@ -307,10 +329,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   }, [orders]);
 
   const value = useMemo<DataContextValue>(() => ({
-    ready, error, uid: user?.uid || localUid, profile, products, orders, emergencies, isStaff,
-    runtimeMode, saveProfile, addProduct, placeCart, sendEmergency, updateEmergency, updateOrder,
-  }), [addProduct, emergencies, error, isStaff, localUid, orders, products, profile, ready,
-    saveProfile, sendEmergency, updateEmergency, updateOrder, user?.uid, placeCart]);
+    ready, error, uid: user?.uid || localUid, profile, products, orders, emergencies, announcements, isStaff,
+    runtimeMode, saveProfile, addProduct, placeCart, sendEmergency, sendAnnouncement, updateEmergency, updateOrder,
+  }), [addProduct, announcements, emergencies, error, isStaff, localUid, orders, products, profile, ready,
+    saveProfile, sendAnnouncement, sendEmergency, updateEmergency, updateOrder, user?.uid, placeCart]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 };

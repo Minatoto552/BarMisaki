@@ -84,6 +84,16 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /announcements/{announcementId} {
+      allow read: if signedIn();
+      allow create: if profileExists()
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.kind in ['urgent', 'notice']
+        && shortString(request.resource.data.message, 300)
+        && request.resource.data.keys().hasOnly(['kind', 'message', 'createdBy', 'creatorName', 'createdAt', 'updatedAt']);
+      allow update, delete: if false;
+    }
+
     match /{document=**} { allow read, write: if false; }
   }
 }

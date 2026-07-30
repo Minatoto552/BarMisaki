@@ -2,12 +2,14 @@ export const productCategories = ['normal_cocktail', 'original_cocktail', 'juice
 export const cocktailColors = ['red', 'blue', 'green', 'white', 'black'] as const;
 export const orderStatuses = ['pending', 'preparing', 'completed'] as const;
 export const emergencyKinds = ['help', 'medical', 'trouble', 'other'] as const;
+export const announcementKinds = ['urgent', 'notice'] as const;
 
 export type ProductCategory = (typeof productCategories)[number];
 export type CocktailColor = (typeof cocktailColors)[number];
 export type OrderStatus = (typeof orderStatuses)[number];
 export type EmergencyKind = (typeof emergencyKinds)[number];
 export type EmergencyStatus = 'active' | 'acknowledged' | 'resolved';
+export type AnnouncementKind = (typeof announcementKinds)[number];
 
 export interface UserProfile {
   id: string;
@@ -97,6 +99,16 @@ export interface Emergency {
   updatedAt: string;
 }
 
+export interface Announcement {
+  id: string;
+  kind: AnnouncementKind;
+  message: string;
+  createdBy: string;
+  creatorName: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface OrderOptions {
   color1?: CocktailColor;
   color2?: CocktailColor;
@@ -108,6 +120,7 @@ export interface CartItem {
   id: string;
   product: Product;
   options: OrderOptions;
+  quantity: number;
 }
 
 export const categoryLabels: Record<ProductCategory, string> = {
@@ -136,4 +149,9 @@ export const emergencyKindLabels: Record<EmergencyKind, string> = {
   medical: '体調不良',
   trouble: 'トラブル',
   other: 'その他',
+};
+
+export const announcementKindLabels: Record<AnnouncementKind, string> = {
+  urgent: '緊急',
+  notice: '連絡',
 };
