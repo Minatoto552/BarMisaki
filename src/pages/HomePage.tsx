@@ -72,7 +72,7 @@ export const HomePage = () => {
       <div className="hero-title-wrap"><h1 className="hero-heading">BARMISAKI</h1></div>
       <div className="hero-copy"><span className="eyebrow light">REALTIME ORDER EXPERIENCE</span><p>好きな一杯を選んでカートへ。<br />テーブルからまとめて注文できます。</p></div>
       <Link className="hero-order-button" to="/menu">注文画面へ<ChevronRight /></Link>
-      <div className="hero-art" aria-hidden="true"><img className="hero-character" src={assetPath('hero/character-cutout.png')} alt="" /></div>
+      <div className="hero-art"><img className="hero-character" src={assetPath('hero/home-white-portrait.jpg')} alt="白を基調とした衣装のBarMisakiキャスト" /><span className="hero-photo-caption">BAR MISAKI / PORTRAIT 01</span></div>
     </section>
 
     <CircularGallery items={slideshowImages} />
