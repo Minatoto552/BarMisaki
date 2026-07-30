@@ -90,6 +90,7 @@ body { color: #d7e2ea; background: radial-gradient(circle at 50% 8%, rgba(118, 3
 .form-card, .account-card, .orders-board { border: 2px solid rgba(215,226,234,.65); border-radius: 44px; color: #d7e2ea; background: #0c0c0c; box-shadow: none; }
 .field-group legend, .field > span { color: #d7e2ea; text-transform: uppercase; letter-spacing: .07em; }
 .field input, .field textarea, .search-box { border-color: rgba(215,226,234,.3); color: #d7e2ea; background: #151515; }
+.search-box input { color: #f3f6f8; caret-color: #d68bd0; }.search-box input::placeholder { color: #89949b; opacity: 1; }
 .field input:focus, .field textarea:focus { border-color: #d7e2ea; box-shadow: 0 0 0 3px rgba(215,226,234,.12); }
 .category-choice-grid button, .choice-grid button { border-color: rgba(215,226,234,.25); color: #d7e2ea; background: #151515; }.category-choice-grid button.selected, .choice-grid button.selected { border-color: #d7e2ea; color: #fff; background: #252525; }
 .image-drop { border-color: rgba(215,226,234,.4); color: #aebbc4; background: #151515; }.image-drop:hover { border-color: #d7e2ea; background: #1d1d1d; }
