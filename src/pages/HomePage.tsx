@@ -1,5 +1,5 @@
-import { AlertTriangle, Bell, ChevronRight, CircleUserRound, ClipboardList, Coffee, House, Plus, Send } from 'lucide-react';
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { AlertTriangle, Bell, ChevronDown, ChevronRight, ChevronUp, CircleUserRound, ClipboardList, Coffee, House, Plus, Send } from 'lucide-react';
+import { useEffect, useMemo, useState, type CSSProperties, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 
 import { CircularGallery } from '../components/CircularGallery';
@@ -25,6 +25,7 @@ const slideshowImages = [
   { src: assetPath('slideshow/gallery-15.webp'), orientation: 'square' },
   { src: assetPath('slideshow/gallery-16.webp'), orientation: 'portrait' },
 ] as const;
+const announcementsPerPage = 6;
 
 export const HomePage = () => {
   const { announcements, profile, sendAnnouncement } = useData();
@@ -33,6 +34,7 @@ export const HomePage = () => {
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [noticePage, setNoticePage] = useState(0);
 
   useEffect(() => {
     const timer = window.setInterval(() => setServiceDayStart(getCurrentServiceDayStart()), 30_000);
@@ -40,6 +42,9 @@ export const HomePage = () => {
   }, []);
 
   const currentAnnouncements = useMemo(() => announcements.filter((item) => new Date(item.createdAt).getTime() >= serviceDayStart), [announcements, serviceDayStart]);
+  const announcementPages = useMemo(() => Array.from({ length: Math.ceil(currentAnnouncements.length / announcementsPerPage) }, (_, index) => currentAnnouncements.slice(index * announcementsPerPage, index * announcementsPerPage + announcementsPerPage)), [currentAnnouncements]);
+
+  const visibleNoticePage = Math.min(noticePage, Math.max(0, announcementPages.length - 1));
 
   const submitAnnouncement = async (event: FormEvent) => {
     event.preventDefault();
@@ -66,11 +71,16 @@ export const HomePage = () => {
 
     <section className="home-notices" id="announcements">
       <div className="home-notices-heading"><div><span className="eyebrow light">TODAY'S ANNOUNCEMENTS</span><h2>本日のお知らせ</h2><p>午前5時から現在までのお知らせを表示しています。</p></div><Bell /></div>
-      {currentAnnouncements.length ? <div className="notice-list">{currentAnnouncements.map((item) => <article className={`notice-card notice-${item.kind}`} key={item.id}>
-        <span className="notice-kind">{item.kind === 'urgent' ? <AlertTriangle /> : <Bell />}{announcementKindLabels[item.kind]}</span>
-        <p>{item.message}</p>
-        <footer><b>{item.creatorName}</b><time dateTime={item.createdAt}>{new Intl.DateTimeFormat('ja-JP', { hour: '2-digit', minute: '2-digit' }).format(new Date(item.createdAt))}</time></footer>
-      </article>)}</div> : <div className="notice-empty"><Bell /><p>本日のお知らせはまだありません。</p></div>}
+      {currentAnnouncements.length ? <div className="notice-carousel" style={{ '--notice-height': `${Math.min(currentAnnouncements.length, announcementsPerPage) * 82 + (Math.min(currentAnnouncements.length, announcementsPerPage) - 1) * 12}px`, '--notice-mobile-height': `${Math.min(currentAnnouncements.length, announcementsPerPage) * 100 + (Math.min(currentAnnouncements.length, announcementsPerPage) - 1) * 12}px` } as CSSProperties}>
+        <div className="notice-carousel-viewport"><div className="notice-carousel-track" style={{ transform: `translateY(-${visibleNoticePage * 100}%)` }}>
+          {announcementPages.map((page, pageIndex) => <div className="notice-list" style={{ transform: `translateY(${pageIndex * 100}%)` }} key={page[0]?.id || pageIndex} aria-hidden={pageIndex !== visibleNoticePage}>{page.map((item) => <article className={`notice-card notice-${item.kind}`} key={item.id}>
+            <span className="notice-kind">{item.kind === 'urgent' ? <AlertTriangle /> : <Bell />}{announcementKindLabels[item.kind]}</span>
+            <p>{item.message}</p>
+            <footer><b>{item.creatorName}</b><time dateTime={item.createdAt}>{new Intl.DateTimeFormat('ja-JP', { hour: '2-digit', minute: '2-digit' }).format(new Date(item.createdAt))}</time></footer>
+          </article>)}</div>)}
+        </div></div>
+        {announcementPages.length > 1 && <div className="notice-carousel-controls"><button type="button" onClick={() => setNoticePage((visibleNoticePage - 1 + announcementPages.length) % announcementPages.length)} aria-label="上のお知らせ6件"><ChevronUp /></button><div>{announcementPages.map((_, index) => <button type="button" key={index} className={index === visibleNoticePage ? 'active' : ''} onClick={() => setNoticePage(index)} aria-label={`${index + 1}ページ目を表示`} aria-current={index === visibleNoticePage ? 'page' : undefined} />)}</div><span>{visibleNoticePage + 1} / {announcementPages.length}</span><button type="button" onClick={() => setNoticePage((visibleNoticePage + 1) % announcementPages.length)} aria-label="下のお知らせ6件"><ChevronDown /></button></div>}
+      </div> : <div className="notice-empty"><Bell /><p>本日のお知らせはまだありません。</p></div>}
     </section>
 
     <footer className="home-footer-tools">
