@@ -32,4 +32,18 @@ describe('HomePage announcements', () => {
     expect(pages[0]).toHaveAttribute('aria-hidden', 'true');
     expect(pages[1]).toHaveAttribute('aria-hidden', 'false');
   });
+
+  it('ベルボタンから本日のお知らせ一覧を開く', () => {
+    const now = new Date().toISOString();
+    mockState.announcements = [{
+      id: 'notice-list', kind: 'urgent', message: '一覧から確認できるお知らせ',
+      createdBy: 'staff', creatorName: 'BarMisaki', createdAt: now, updatedAt: now,
+    }];
+    render(<MemoryRouter><HomePage /></MemoryRouter>);
+
+    const openButtons = screen.getAllByRole('button', { name: 'お知らせ一覧を開く' });
+    fireEvent.click(openButtons[openButtons.length - 1]);
+
+    expect(screen.getByRole('dialog', { name: '本日のお知らせ一覧' })).toHaveTextContent('一覧から確認できるお知らせ');
+  });
 });

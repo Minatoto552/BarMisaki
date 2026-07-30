@@ -3,10 +3,11 @@ import { useEffect, useMemo, useState, type CSSProperties, type FormEvent } from
 import { Link } from 'react-router-dom';
 
 import { CircularGallery } from '../components/CircularGallery';
+import { Modal } from '../components/Modal';
 import { assetPath } from '../lib/assets';
 import { useData } from '../lib/data';
 import { getCurrentServiceDayStart } from '../lib/service-day';
-import { announcementKindLabels, type AnnouncementKind } from '../types';
+import { announcementKindLabels, type Announcement, type AnnouncementKind } from '../types';
 
 const slideshowImages = [
   { src: assetPath('slideshow/gallery-01.webp'), orientation: 'landscape' },
@@ -27,6 +28,12 @@ const slideshowImages = [
 ] as const;
 const announcementsPerPage = 6;
 
+const NoticeCard = ({ item }: { item: Announcement }) => <article className={`notice-card notice-${item.kind}`}>
+  <span className="notice-kind">{item.kind === 'urgent' ? <AlertTriangle /> : <Bell />}{announcementKindLabels[item.kind]}</span>
+  <p>{item.message}</p>
+  <footer><b>{item.creatorName}</b><time dateTime={item.createdAt}>{new Intl.DateTimeFormat('ja-JP', { hour: '2-digit', minute: '2-digit' }).format(new Date(item.createdAt))}</time></footer>
+</article>;
+
 export const HomePage = () => {
   const { announcements, profile, sendAnnouncement } = useData();
   const [serviceDayStart, setServiceDayStart] = useState(() => getCurrentServiceDayStart());
@@ -35,6 +42,7 @@ export const HomePage = () => {
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [noticePage, setNoticePage] = useState(0);
+  const [announcementsOpen, setAnnouncementsOpen] = useState(false);
 
   useEffect(() => {
     const timer = window.setInterval(() => setServiceDayStart(getCurrentServiceDayStart()), 30_000);
@@ -70,18 +78,18 @@ export const HomePage = () => {
     <CircularGallery items={slideshowImages} />
 
     <section className="home-notices" id="announcements">
-      <div className="home-notices-heading"><div><span className="eyebrow light">TODAY'S ANNOUNCEMENTS</span><h2>本日のお知らせ</h2><p>午前5時から現在までのお知らせを表示しています。</p></div><Bell /></div>
+      <div className="home-notices-heading"><div><span className="eyebrow light">TODAY'S ANNOUNCEMENTS</span><h2>本日のお知らせ</h2><p>午前5時から現在までのお知らせを表示しています。</p></div><button className="notice-list-button" type="button" onClick={() => setAnnouncementsOpen(true)} aria-label="お知らせ一覧を開く"><Bell /></button></div>
       {currentAnnouncements.length ? <div className="notice-carousel" style={{ '--notice-height': `${Math.min(currentAnnouncements.length, announcementsPerPage) * 82 + (Math.min(currentAnnouncements.length, announcementsPerPage) - 1) * 12}px`, '--notice-mobile-height': `${Math.min(currentAnnouncements.length, announcementsPerPage) * 100 + (Math.min(currentAnnouncements.length, announcementsPerPage) - 1) * 12}px` } as CSSProperties}>
         <div className="notice-carousel-viewport"><div className="notice-carousel-track" style={{ transform: `translateY(-${visibleNoticePage * 100}%)` }}>
-          {announcementPages.map((page, pageIndex) => <div className="notice-list" style={{ transform: `translateY(${pageIndex * 100}%)` }} key={page[0]?.id || pageIndex} aria-hidden={pageIndex !== visibleNoticePage}>{page.map((item) => <article className={`notice-card notice-${item.kind}`} key={item.id}>
-            <span className="notice-kind">{item.kind === 'urgent' ? <AlertTriangle /> : <Bell />}{announcementKindLabels[item.kind]}</span>
-            <p>{item.message}</p>
-            <footer><b>{item.creatorName}</b><time dateTime={item.createdAt}>{new Intl.DateTimeFormat('ja-JP', { hour: '2-digit', minute: '2-digit' }).format(new Date(item.createdAt))}</time></footer>
-          </article>)}</div>)}
+          {announcementPages.map((page, pageIndex) => <div className="notice-list" style={{ transform: `translateY(${pageIndex * 100}%)` }} key={page[0]?.id || pageIndex} aria-hidden={pageIndex !== visibleNoticePage}>{page.map((item) => <NoticeCard item={item} key={item.id} />)}</div>)}
         </div></div>
         {announcementPages.length > 1 && <div className="notice-carousel-controls"><button type="button" onClick={() => setNoticePage((visibleNoticePage - 1 + announcementPages.length) % announcementPages.length)} aria-label="上のお知らせ6件"><ChevronUp /></button><div>{announcementPages.map((_, index) => <button type="button" key={index} className={index === visibleNoticePage ? 'active' : ''} onClick={() => setNoticePage(index)} aria-label={`${index + 1}ページ目を表示`} aria-current={index === visibleNoticePage ? 'page' : undefined} />)}</div><span>{visibleNoticePage + 1} / {announcementPages.length}</span><button type="button" onClick={() => setNoticePage((visibleNoticePage + 1) % announcementPages.length)} aria-label="下のお知らせ6件"><ChevronDown /></button></div>}
       </div> : <div className="notice-empty"><Bell /><p>本日のお知らせはまだありません。</p></div>}
     </section>
+
+    {announcementsOpen && <Modal title="本日のお知らせ一覧" onClose={() => setAnnouncementsOpen(false)} wide><div className="announcement-modal-list">
+      {currentAnnouncements.length ? currentAnnouncements.map((item) => <NoticeCard item={item} key={item.id} />) : <div className="notice-empty"><Bell /><p>本日のお知らせはまだありません。</p></div>}
+    </div></Modal>}
 
     <footer className="home-footer-tools">
       <div className="home-shortcuts"><span className="eyebrow light">SHORTCUTS</span><h2>各項目へ移動</h2><nav aria-label="ホームショートカット">
