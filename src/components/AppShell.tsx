@@ -1,7 +1,9 @@
 import { CircleUserRound, ClipboardList, Coffee, House, Plus, Radio } from 'lucide-react';
 import { NavLink, Outlet } from 'react-router-dom';
+import { useEffect } from 'react';
 
 import { useData } from '../lib/data';
+import { installNotificationSoundUnlock } from '../lib/notification-sounds';
 import { EmergencySystem } from './EmergencySystem';
 import { AnnouncementToast } from './AnnouncementToast';
 
@@ -15,6 +17,7 @@ const links = [
 
 export const AppShell = () => {
   const { profile, runtimeMode, ready, error } = useData();
+  useEffect(() => installNotificationSoundUnlock(), []);
   return (
     <div className="app-shell">
       <header className="topbar">

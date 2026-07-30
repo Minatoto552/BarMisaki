@@ -1,9 +1,10 @@
 import { AlertTriangle, BellRing, Check, ShieldAlert } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { emergencyKindLabels, emergencyKinds, type EmergencyKind } from '../types';
 import { useData } from '../lib/data';
+import { playEmergencySound } from '../lib/notification-sounds';
 import { Modal } from './Modal';
 
 export const EmergencySystem = () => {
@@ -14,8 +15,24 @@ export const EmergencySystem = () => {
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const initialized = useRef(false);
+  const heard = useRef(new Set<string>());
   const active = emergencies.filter((item) => item.status !== 'resolved');
   const latest = active[0];
+
+  useEffect(() => {
+    if (!initialized.current) {
+      emergencies.forEach((item) => heard.current.add(item.id));
+      initialized.current = true;
+      return;
+    }
+    const next = emergencies.find((item) => {
+      const age = Date.now() - new Date(item.createdAt).getTime();
+      return item.status === 'active' && !heard.current.has(item.id) && age >= 0 && age < 20_000;
+    });
+    emergencies.forEach((item) => heard.current.add(item.id));
+    if (next) playEmergencySound();
+  }, [emergencies]);
 
   const submit = async () => {
     if (!profile) { setOpen(false); navigate('/account'); return; }
