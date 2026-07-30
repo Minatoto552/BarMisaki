@@ -76,7 +76,9 @@ const OrderGroupItem = ({ order, onRecipe }: { order: Order; onRecipe: () => voi
   return <div className={`order-group-item${isColorTwin ? ' color-twin-item' : ''}`}>
     <img className="order-thumb" src={order.productImageUrl} alt="" />
     {isColorTwin ? <div className="order-main color-twin-main" aria-label={`色 ${colorLabels[order.color1]}と${colorLabels[order.color2]}、炭酸 ${order.carbonated ? 'あり' : 'なし'}、媚薬 ${order.aphrodisiac ? 'あり' : 'なし'}`}>
+      <span>{categoryLabels[order.category]}</span>
       <div className="order-options color-twin-selection"><span><i className={`mini-color color-${order.color1}`} />{colorLabels[order.color1]} ＋ <i className={`mini-color color-${order.color2}`} />{colorLabels[order.color2]}</span><span>炭酸 <b>{order.carbonated ? 'あり' : 'なし'}</b></span><span>媚薬 <b>{order.aphrodisiac ? 'あり' : 'なし'}</b></span></div>
+      <div className="color-twin-name-row"><strong>{order.productName}</strong></div>
     </div> : <div className="order-main"><span>{categoryLabels[order.category]}</span><h3>{order.productName}</h3>
       {order.category === 'normal_cocktail' && <div className="order-options"><span><i className={`mini-color color-${order.color1}`} />{colorLabels[order.color1]} ＋ <i className={`mini-color color-${order.color2}`} />{colorLabels[order.color2]}</span><span>炭酸 <b>{order.carbonated ? 'あり' : 'なし'}</b></span><span>媚薬 <b>{order.aphrodisiac ? 'あり' : 'なし'}</b></span></div>}
       {order.category === 'original_cocktail' && <button type="button" className="recipe-button" onClick={onRecipe}><Eye />レシピを開く</button>}
