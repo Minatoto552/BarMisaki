@@ -1,5 +1,5 @@
-import { Check, ChevronRight, Grid2X2, List, Minus, Plus, Search, ShoppingBag } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { Check, ChevronLeft, ChevronRight, Grid2X2, List, Minus, Plus, Search, ShoppingBag } from 'lucide-react';
+import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { Modal } from '../components/Modal';
@@ -35,6 +35,7 @@ export const MenuPage = () => {
   const [busy, setBusy] = useState(false);
   const [receiptNumber, setReceiptNumber] = useState<string | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
+  const categoryTabsRef = useRef<HTMLDivElement>(null);
 
   const menuProducts = useMemo(() => {
     const hasNormalCocktail = products.some((product) => product.category === 'normal_cocktail' && product.isAvailable);
@@ -88,14 +89,15 @@ export const MenuPage = () => {
   };
 
   const closeCart = () => { setCartOpen(false); setReceiptNumber(null); setErrors([]); };
+  const slideCategories = (direction: -1 | 1) => categoryTabsRef.current?.scrollBy({ left: direction * categoryTabsRef.current.clientWidth * 0.72, behavior: 'smooth' });
 
   return (
     <div className="page menu-page">
       <section className="menu-section">
         <div className="section-title-row"><div><span className="eyebrow">ORDER MENU</span><h2>MENU</h2><p>商品を選択し、カートからまとめて注文。</p></div><div className="menu-tools"><label className="search-box"><Search /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="全カテゴリーから商品を検索" /></label><div className="menu-view-toggle" aria-label="商品表示タイプ"><button type="button" className={viewMode === 'cards' ? 'active' : ''} aria-pressed={viewMode === 'cards'} onClick={() => setViewMode('cards')}><Grid2X2 />現在の表示</button><button type="button" className={viewMode === 'compact' ? 'active' : ''} aria-pressed={viewMode === 'compact'} onClick={() => setViewMode('compact')}><List />商品名のみ</button><small>ノーマルカクテル以外に適用</small></div></div></div>
-        <div className="tab-list" role="tablist" aria-label="商品カテゴリー">
-          {productCategories.map((value) => <button role="tab" aria-selected={category === value} className={category === value ? 'active' : ''} key={value} onClick={() => setCategory(value)}>{categoryLabels[value]}<span>{menuProducts.filter((item) => item.category === value && item.isAvailable).length}</span></button>)}
-        </div>
+        <div className="category-tabs-shell"><button className="category-slide-button previous" type="button" onClick={() => slideCategories(-1)} aria-label="前のカテゴリーを見る"><ChevronLeft /></button><div className="tab-list" ref={categoryTabsRef} role="tablist" aria-label="商品カテゴリー">
+          {productCategories.map((value) => <button role="tab" aria-selected={category === value} className={category === value ? 'active' : ''} key={value} onClick={(event) => { setCategory(value); event.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); }}>{categoryLabels[value]}<span>{menuProducts.filter((item) => item.category === value && item.isAvailable).length}</span></button>)}
+        </div><button className="category-slide-button next" type="button" onClick={() => slideCategories(1)} aria-label="次のカテゴリーを見る"><ChevronRight /></button></div>
 
         {search.trim() && <p className="search-result-count">全カテゴリーから <b>{visible.length}件</b> 見つかりました</p>}
         {visible.length ? <div className={`product-grid ${viewMode === 'compact' ? 'product-grid-compact' : ''}`}>{visible.map((product) => product.category === 'normal_cocktail' ? (
