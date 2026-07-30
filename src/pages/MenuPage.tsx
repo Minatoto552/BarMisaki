@@ -1,4 +1,4 @@
-import { Check, ChevronRight, Minus, Plus, Search, ShoppingBag } from 'lucide-react';
+import { Check, ChevronRight, Grid2X2, List, Minus, Plus, Search, ShoppingBag } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -6,6 +6,7 @@ import { Modal } from '../components/Modal';
 import { useData } from '../lib/data';
 import { addCartItem, getCartQuantity, setCartItemQuantity } from '../lib/cart';
 import { builtInNormalCocktail } from '../lib/sample-data';
+import { filterMenuProducts } from '../lib/menu-search';
 import { validateOrderOptions, validateTableNumber } from '../lib/validation';
 import {
   categoryLabels, cocktailColors, colorLabels, productCategories,
@@ -23,6 +24,7 @@ export const MenuPage = () => {
   const navigate = useNavigate();
   const [category, setCategory] = useState<ProductCategory>('normal_cocktail');
   const [search, setSearch] = useState('');
+  const [viewMode, setViewMode] = useState<'cards' | 'compact'>('cards');
   const [selected, setSelected] = useState<Product | null>(null);
   const [options, setOptions] = useState<OrderOptions>({});
   const [confirming, setConfirming] = useState(false);
@@ -39,7 +41,7 @@ export const MenuPage = () => {
     return hasNormalCocktail ? products : [builtInNormalCocktail, ...products];
   }, [products]);
 
-  const visible = useMemo(() => menuProducts.filter((product) => product.category === category && product.isAvailable && product.name.toLowerCase().includes(search.trim().toLowerCase())), [category, menuProducts, search]);
+  const visible = useMemo(() => filterMenuProducts(menuProducts, category, search), [category, menuProducts, search]);
   const cartQuantity = useMemo(() => getCartQuantity(cart), [cart]);
 
   const openOrder = (product: Product) => {
@@ -90,19 +92,22 @@ export const MenuPage = () => {
   return (
     <div className="page menu-page">
       <section className="menu-section">
-        <div className="section-title-row"><div><span className="eyebrow">ORDER MENU</span><h2>MENU</h2><p>商品を選択し、カートからまとめて注文。</p></div><label className="search-box"><Search /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="商品を検索" /></label></div>
+        <div className="section-title-row"><div><span className="eyebrow">ORDER MENU</span><h2>MENU</h2><p>商品を選択し、カートからまとめて注文。</p></div><div className="menu-tools"><label className="search-box"><Search /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="全カテゴリーから商品を検索" /></label><div className="menu-view-toggle" aria-label="商品表示タイプ"><button type="button" className={viewMode === 'cards' ? 'active' : ''} aria-pressed={viewMode === 'cards'} onClick={() => setViewMode('cards')}><Grid2X2 />現在の表示</button><button type="button" className={viewMode === 'compact' ? 'active' : ''} aria-pressed={viewMode === 'compact'} onClick={() => setViewMode('compact')}><List />商品名のみ</button><small>ノーマルカクテル以外に適用</small></div></div></div>
         <div className="tab-list" role="tablist" aria-label="商品カテゴリー">
           {productCategories.map((value) => <button role="tab" aria-selected={category === value} className={category === value ? 'active' : ''} key={value} onClick={() => setCategory(value)}>{categoryLabels[value]}<span>{menuProducts.filter((item) => item.category === value && item.isAvailable).length}</span></button>)}
         </div>
 
-        {visible.length ? <div className="product-grid">{visible.map((product) => product.category === 'normal_cocktail' ? (
+        {search.trim() && <p className="search-result-count">全カテゴリーから <b>{visible.length}件</b> 見つかりました</p>}
+        {visible.length ? <div className={`product-grid ${viewMode === 'compact' ? 'product-grid-compact' : ''}`}>{visible.map((product) => product.category === 'normal_cocktail' ? (
           <NormalCocktailBuilder key={product.id} product={product} onAdd={addConfiguredToCart} />
+        ) : viewMode === 'compact' ? (
+          <article className="compact-product-card" key={product.id}><h3>{product.name}</h3><button type="button" onClick={() => openOrder(product)}><ShoppingBag />カートへ<ChevronRight /></button></article>
         ) : (
           <article className="product-card" key={product.id}>
             <div className="product-image"><img src={product.imageUrl} alt={product.name} /><span>{categoryLabels[product.category]}</span></div>
             <div className="product-body"><div><h3>{product.name}</h3><p>by {product.creatorName}</p></div><button type="button" onClick={() => openOrder(product)}><ShoppingBag />カートへ追加<ChevronRight /></button></div>
           </article>
-        ))}</div> : <div className="empty-state"><CoffeeIcon /><h3>このカテゴリーの商品はまだありません</h3><p>「商品追加」から最初のメニューを登録できます。</p><button className="secondary-button" onClick={() => navigate('/add')}>商品を追加する</button></div>}
+        ))}</div> : <div className="empty-state"><CoffeeIcon /><h3>{search.trim() ? '検索に一致する商品がありません' : 'このカテゴリーの商品はまだありません'}</h3><p>{search.trim() ? '商品名やカテゴリー名を変えて検索してください。' : '「商品追加」から最初のメニューを登録できます。'}</p>{!search.trim() && <button className="secondary-button" onClick={() => navigate('/add')}>商品を追加する</button>}</div>}
       </section>
 
       <button className="cart-fab" type="button" onClick={() => { setCartOpen(true); setErrors([]); }} aria-label={`カートを開く、${cartQuantity}点`}><ShoppingBag /><span>カート</span><b>{cartQuantity}</b></button>
