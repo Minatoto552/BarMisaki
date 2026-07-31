@@ -8,20 +8,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { onAuthStateChanged, signInAnonymously, type User } from 'firebase/auth';
-import {
-  addDoc,
-  collection,
-  doc,
-  getDoc,
-  onSnapshot,
-  orderBy,
-  query,
-  setDoc,
-  updateDoc,
-  where,
-  writeBatch,
-} from 'firebase/firestore';
+import type { User } from 'firebase/auth';
 
 import type {
   Emergency,
@@ -44,7 +31,7 @@ import type {
   Announcement,
   AnnouncementKind,
 } from '../types';
-import { firebaseServices, runtimeMode } from './firebase';
+import { getFirebaseServices, runtimeMode } from './firebase';
 import { sampleProducts } from './sample-data';
 
 interface ProductDraft {
@@ -149,7 +136,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const lastMutation = useRef(0);
 
   useEffect(() => {
-    if (!firebaseServices.auth) {
+    if (runtimeMode === 'sample') {
       const syncLocal = () => {
         setProfile(readJson(KEYS.profile, null));
         setProducts(readJson(KEYS.products, sampleProducts));
@@ -165,42 +152,66 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       };
     }
 
-    return onAuthStateChanged(firebaseServices.auth, (nextUser) => {
-      if (nextUser) {
-        setUser(nextUser);
-        setIsStaff(true);
-      } else {
-        void signInAnonymously(firebaseServices.auth!).catch((reason: unknown) => {
-          const detail = reason instanceof Error ? reason.message : String(reason);
-          setError(`匿名ログインに失敗しました。${detail}`);
-          setReady(true);
+    let disposed = false;
+    let unsubscribe = () => {};
+    void getFirebaseServices()
+      .then(({ auth, authApi }) => {
+        if (disposed || !auth || !authApi) return;
+        unsubscribe = authApi.onAuthStateChanged(auth, (nextUser) => {
+          if (nextUser) {
+            setUser(nextUser);
+            setIsStaff(true);
+          } else {
+            void authApi.signInAnonymously(auth).catch((reason: unknown) => {
+              const detail = reason instanceof Error ? reason.message : String(reason);
+              setError(`匿名ログインに失敗しました。${detail}`);
+              setReady(true);
+            });
+          }
         });
-      }
-    });
+      })
+      .catch((reason: unknown) => {
+        if (disposed) return;
+        const detail = reason instanceof Error ? reason.message : String(reason);
+        setError(`接続の準備に失敗しました。${detail}`);
+        setReady(true);
+      });
+    return () => {
+      disposed = true;
+      unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
-    if (!user || !firebaseServices.db) return undefined;
-    const db = firebaseServices.db;
-    const unsubscribers = [
-      onSnapshot(doc(db, 'users', user.uid), (snapshot) => {
-        setProfile(snapshot.exists() ? ({ id: snapshot.id, ...snapshot.data() } as UserProfile) : null);
-      }),
-      onSnapshot(query(collection(db, 'products'), orderBy('createdAt', 'desc')), (snapshot) => {
-        setProducts(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as Product));
-        setReady(true);
-      }),
-      onSnapshot(query(collection(db, 'orders'), ...(isStaff ? [] : [where('orderedBy', '==', user.uid)]), orderBy('createdAt', 'desc')), (snapshot) => {
-        setOrders(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as Order));
-      }),
-      onSnapshot(query(collection(db, 'emergencies'), orderBy('createdAt', 'desc')), (snapshot) => {
-        setEmergencies(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as Emergency));
-      }),
-      onSnapshot(query(collection(db, 'announcements'), orderBy('createdAt', 'desc')), (snapshot) => {
-        setAnnouncements(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as Announcement));
-      }),
-    ];
-    return () => unsubscribers.forEach((unsubscribe) => unsubscribe());
+    if (!user) return undefined;
+    let disposed = false;
+    let unsubscribers: Array<() => void> = [];
+    void getFirebaseServices().then(({ db, firestoreApi }) => {
+      if (disposed || !db || !firestoreApi) return;
+      const { collection, doc, onSnapshot, orderBy, query, where } = firestoreApi;
+      unsubscribers = [
+        onSnapshot(doc(db, 'users', user.uid), (snapshot) => {
+          setProfile(snapshot.exists() ? ({ id: snapshot.id, ...snapshot.data() } as UserProfile) : null);
+        }),
+        onSnapshot(query(collection(db, 'products'), orderBy('createdAt', 'desc')), (snapshot) => {
+          setProducts(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as Product));
+          setReady(true);
+        }),
+        onSnapshot(query(collection(db, 'orders'), ...(isStaff ? [] : [where('orderedBy', '==', user.uid)]), orderBy('createdAt', 'desc')), (snapshot) => {
+          setOrders(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as Order));
+        }),
+        onSnapshot(query(collection(db, 'emergencies'), orderBy('createdAt', 'desc')), (snapshot) => {
+          setEmergencies(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as Emergency));
+        }),
+        onSnapshot(query(collection(db, 'announcements'), orderBy('createdAt', 'desc')), (snapshot) => {
+          setAnnouncements(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as Announcement));
+        }),
+      ];
+    });
+    return () => {
+      disposed = true;
+      unsubscribers.forEach((unsubscribe) => unsubscribe());
+    };
   }, [isStaff, user]);
 
   const uploadImage = useCallback(async (file: File, path: string) => {
@@ -227,8 +238,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       id: uid, displayName: displayName.trim(), iconUrl,
       createdAt: profile?.createdAt || timestamp, updatedAt: timestamp,
     };
-    if (firebaseServices.db) {
-      await setDoc(doc(firebaseServices.db, 'users', uid), next);
+    const { db, firestoreApi } = await getFirebaseServices();
+    if (db && firestoreApi) {
+      await firestoreApi.setDoc(firestoreApi.doc(db, 'users', uid), next);
     } else {
       writeJson(KEYS.profile, next);
     }
@@ -247,8 +259,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const next: ProductWithoutId = draft.category === 'original_cocktail'
       ? { ...base, category: draft.category, recipe: draft.recipe.trim() }
       : { ...base, category: draft.category };
-    if (firebaseServices.db) {
-      await addDoc(collection(firebaseServices.db, 'products'), next);
+    const { db, firestoreApi } = await getFirebaseServices();
+    if (db && firestoreApi) {
+      await firestoreApi.addDoc(firestoreApi.collection(db, 'products'), next);
     } else {
       writeJson(KEYS.products, [{ id: makeId(), ...next }, ...products]);
     }
@@ -276,9 +289,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       if (product.category === 'original_cocktail') return { ...base, category: product.category, recipe: product.recipe };
       return { ...base, category: product.category };
     }));
-    if (firebaseServices.db) {
-      const batch = writeBatch(firebaseServices.db);
-      nextOrders.forEach((next) => batch.set(doc(collection(firebaseServices.db!, 'orders')), next));
+    const { db, firestoreApi } = await getFirebaseServices();
+    if (db && firestoreApi) {
+      const batch = firestoreApi.writeBatch(db);
+      nextOrders.forEach((next) => batch.set(firestoreApi.doc(firestoreApi.collection(db, 'orders')), next));
       await batch.commit();
     } else {
       writeJson(KEYS.orders, [...nextOrders.map((next) => ({ id: makeId(), ...next } as Order)), ...orders]);
@@ -294,7 +308,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       kind, message: message.trim(), createdBy: current.id, creatorName: current.displayName,
       creatorIconUrl: current.iconUrl, status: 'active', createdAt: timestamp, updatedAt: timestamp,
     };
-    if (firebaseServices.db) await addDoc(collection(firebaseServices.db, 'emergencies'), next);
+    const { db, firestoreApi } = await getFirebaseServices();
+    if (db && firestoreApi) await firestoreApi.addDoc(firestoreApi.collection(db, 'emergencies'), next);
     else writeJson(KEYS.emergencies, [{ id: makeId(), ...next }, ...emergencies]);
   }, [emergencies, requireProfile]);
 
@@ -307,21 +322,24 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       createdAt: timestamp, updatedAt: timestamp,
     };
     if (!next.message || next.message.length > 300) throw new Error('お知らせは1〜300文字で入力してください。');
-    if (firebaseServices.db) await addDoc(collection(firebaseServices.db, 'announcements'), next);
+    const { db, firestoreApi } = await getFirebaseServices();
+    if (db && firestoreApi) await firestoreApi.addDoc(firestoreApi.collection(db, 'announcements'), next);
     else writeJson(KEYS.announcements, [{ id: makeId(), ...next }, ...announcements]);
   }, [announcements, requireProfile]);
 
   const updateEmergency = useCallback(async (id: string, status: EmergencyStatus) => {
     const updatedAt = nowIso();
-    if (firebaseServices.db) await updateDoc(doc(firebaseServices.db, 'emergencies', id), { status, updatedAt });
+    const { db, firestoreApi } = await getFirebaseServices();
+    if (db && firestoreApi) await firestoreApi.updateDoc(firestoreApi.doc(db, 'emergencies', id), { status, updatedAt });
     else writeJson(KEYS.emergencies, emergencies.map((item) => item.id === id ? { ...item, status, updatedAt } : item));
   }, [emergencies]);
 
   const updateOrder = useCallback(async (id: string, status: OrderStatus) => {
     const updatedAt = nowIso();
-    if (firebaseServices.db) {
-      const orderRef = doc(firebaseServices.db, 'orders', id);
-      if ((await getDoc(orderRef)).exists()) await updateDoc(orderRef, { status, updatedAt });
+    const { db, firestoreApi } = await getFirebaseServices();
+    if (db && firestoreApi) {
+      const orderRef = firestoreApi.doc(db, 'orders', id);
+      if ((await firestoreApi.getDoc(orderRef)).exists()) await firestoreApi.updateDoc(orderRef, { status, updatedAt });
     } else {
       const currentOrders = readJson<Order[]>(KEYS.orders, orders);
       writeJson(KEYS.orders, currentOrders.map((item) => item.id === id ? { ...item, status, updatedAt } : item));

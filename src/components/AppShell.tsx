@@ -32,7 +32,7 @@ export const AppShell = () => {
       </header>
       {runtimeMode === 'sample' && <div className="demo-bar"><Radio size={15} />デモモード：操作内容はこのブラウザにリアルタイム保存されます</div>}
       {error && <div className="global-error">{error}</div>}
-      <main>{ready ? <Outlet /> : <div className="loading-state"><span className="spinner" />データを読み込んでいます</div>}</main>
+      <main aria-busy={!ready}><Outlet /></main>
       <AnnouncementToast />
       <EmergencySystem />
       <nav className="mobile-nav" aria-label="メインナビゲーション">

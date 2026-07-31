@@ -1,6 +1,6 @@
-import { getApp, getApps, initializeApp, type FirebaseOptions } from 'firebase/app';
-import { connectAuthEmulator, getAuth, type Auth } from 'firebase/auth';
-import { connectFirestoreEmulator, getFirestore, type Firestore } from 'firebase/firestore';
+import type { FirebaseOptions } from 'firebase/app';
+import type { Auth } from 'firebase/auth';
+import type { Firestore } from 'firebase/firestore';
 
 const config: FirebaseOptions = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -13,20 +13,38 @@ const config: FirebaseOptions = {
 
 export const hasFirebaseConfig = Boolean(config.apiKey && config.authDomain && config.projectId && config.appId);
 export const isEmulatorMode = import.meta.env.VITE_USE_FIREBASE_EMULATORS === 'true';
+export const runtimeMode = hasFirebaseConfig ? (isEmulatorMode ? 'emulator' : 'firebase') : 'sample';
 
-let auth: Auth | null = null;
-let db: Firestore | null = null;
-
-if (hasFirebaseConfig) {
-  const app = getApps().length ? getApp() : initializeApp(config);
-  auth = getAuth(app);
-  db = getFirestore(app);
-
-  if (isEmulatorMode) {
-    connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
-    connectFirestoreEmulator(db, '127.0.0.1', 8080);
-  }
+export interface FirebaseRuntime {
+  auth: Auth | null;
+  db: Firestore | null;
+  authApi: typeof import('firebase/auth') | null;
+  firestoreApi: typeof import('firebase/firestore') | null;
 }
 
-export const firebaseServices = { auth, db };
-export const runtimeMode = hasFirebaseConfig ? (isEmulatorMode ? 'emulator' : 'firebase') : 'sample';
+let runtimePromise: Promise<FirebaseRuntime> | null = null;
+
+export const getFirebaseServices = (): Promise<FirebaseRuntime> => {
+  if (!hasFirebaseConfig) {
+    return Promise.resolve({ auth: null, db: null, authApi: null, firestoreApi: null });
+  }
+  if (runtimePromise) return runtimePromise;
+
+  runtimePromise = Promise.all([
+    import('firebase/app'),
+    import('firebase/auth'),
+    import('firebase/firestore'),
+  ]).then(([appApi, authApi, firestoreApi]) => {
+    const app = appApi.getApps().length ? appApi.getApp() : appApi.initializeApp(config);
+    const auth = authApi.getAuth(app);
+    const db = firestoreApi.getFirestore(app);
+
+    if (isEmulatorMode) {
+      authApi.connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
+      firestoreApi.connectFirestoreEmulator(db, '127.0.0.1', 8080);
+    }
+    return { auth, db, authApi, firestoreApi };
+  });
+
+  return runtimePromise;
+};

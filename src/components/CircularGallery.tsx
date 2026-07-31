@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { createLoopGeometry, getLoopPoint } from '../lib/circular-path';
 
@@ -14,8 +14,18 @@ export const CircularGallery = ({ items }: { items: readonly CircularGalleryItem
   const stageRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<Array<HTMLElement | null>>([]);
   const startTimeRef = useRef<number | null>(null);
+  const [active, setActive] = useState(false);
 
   useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return undefined;
+    const observer = new IntersectionObserver(([entry]) => setActive(entry.isIntersecting), { threshold: 0.01 });
+    observer.observe(stage);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!active) return undefined;
     const stage = stageRef.current;
     const nodes = itemRefs.current.slice(0, uniqueItems.length).filter((node): node is HTMLElement => Boolean(node));
     if (!stage || !nodes.length) return undefined;
@@ -64,12 +74,12 @@ export const CircularGallery = ({ items }: { items: readonly CircularGalleryItem
       resizeObserver.disconnect();
       cancelAnimationFrame(animationFrame);
     };
-  }, [uniqueItems]);
+  }, [active, uniqueItems]);
 
   return (
     <section className="menu-marquee circular-gallery" aria-label="BarMisakiギャラリー">
       <div className="circular-gallery-stage" ref={stageRef}>
-        {uniqueItems.map((item, index) => <figure className={`circular-gallery-item ${item.orientation}`} key={item.src} ref={(node) => { itemRefs.current[index] = node; }}><img src={item.src} alt={`BarMisaki ギャラリー ${index + 1}`} loading="lazy" /></figure>)}
+        {uniqueItems.map((item, index) => <figure className={`circular-gallery-item ${item.orientation}`} key={item.src} ref={(node) => { itemRefs.current[index] = node; }}><img src={item.src} alt={`BarMisaki ギャラリー ${index + 1}`} loading="lazy" decoding="async" fetchPriority="low" /></figure>)}
       </div>
       <div className="circular-gallery-edge circular-gallery-edge-left" aria-hidden="true" />
       <div className="circular-gallery-edge circular-gallery-edge-right" aria-hidden="true" />
