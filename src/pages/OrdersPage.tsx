@@ -1,4 +1,4 @@
-import { AlertTriangle, BellRing, CheckCircle2, ChefHat, Clock3, Eye, Radio, ShieldCheck, UserRound } from 'lucide-react';
+import { AlertTriangle, BellRing, CheckCircle2, ChefHat, Clock3, Eye, Radio, UserRound } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 import { Modal } from '../components/Modal';
@@ -44,9 +44,9 @@ export const OrdersPage = () => {
     <div className="page orders-page">
       <div className="page-heading split-heading"><div><span className="eyebrow">LIVE KITCHEN</span><h1>{isStaff ? '注文管理' : '注文状況'}</h1><p>{isStaff ? '新しい注文と状態変更を、全端末へリアルタイムで同期します。' : 'あなたの注文が現在どの状態か確認できます。'}</p></div><div className="live-indicator"><Radio /><span><b>LIVE</b>常時更新中</span></div></div>
 
-      {isStaff && <section className="emergency-desk">
+      {isStaff && activeEmergency.length > 0 && <section className="emergency-desk">
         <div className="desk-title"><div className="desk-icon"><BellRing /></div><div><span className="eyebrow light">EMERGENCY DESK</span><h2>緊急通知</h2></div><b>{activeEmergency.length}件 対応中</b></div>
-        {activeEmergency.length ? <div className="emergency-list">{activeEmergency.map((item) => <article key={item.id} className={`emergency-ticket status-${item.status}`}><img src={item.creatorIconUrl} alt="" /><div><strong>{emergencyKindLabels[item.kind]}</strong><span>{item.creatorName}・{formatTime(item.createdAt)}</span><p>{item.message || '補足はありません'}</p></div><div className="ticket-actions"><button type="button" className="ghost-button" onClick={() => setEmergencyDetail(item)}><Eye />詳細</button>{item.status === 'active' ? <button type="button" onClick={() => void updateEmergency(item.id, 'acknowledged')}>対応を開始</button> : <button type="button" onClick={() => void updateEmergency(item.id, 'resolved')}><CheckCircle2 />解決</button>}</div></article>)}</div> : <div className="desk-empty"><ShieldCheck />現在、未解決の緊急通知はありません</div>}
+        <div className="emergency-list">{activeEmergency.map((item) => <article key={item.id} className={`emergency-ticket status-${item.status}`}><img src={item.creatorIconUrl} alt="" /><div><strong>{emergencyKindLabels[item.kind]}</strong><span>{item.creatorName}・{formatTime(item.createdAt)}</span><p>{item.message || '補足はありません'}</p></div><div className="ticket-actions"><button type="button" className="ghost-button" onClick={() => setEmergencyDetail(item)}><Eye />詳細</button>{item.status === 'active' ? <button type="button" onClick={() => void updateEmergency(item.id, 'acknowledged')}>対応を開始</button> : <button type="button" onClick={() => void updateEmergency(item.id, 'resolved')}><CheckCircle2 />解決</button>}</div></article>)}</div>
       </section>}
 
       <section className="orders-board">
