@@ -26,6 +26,7 @@ export const MenuPage = () => {
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<'cards' | 'compact'>('compact');
   const [selected, setSelected] = useState<Product | null>(null);
+  const [selectedQuantity, setSelectedQuantity] = useState(1);
   const [options, setOptions] = useState<OrderOptions>({});
   const [confirming, setConfirming] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -47,7 +48,7 @@ export const MenuPage = () => {
 
   const openOrder = (product: Product) => {
     if (!profile) { navigate('/account', { state: { notice: '注文する前に、名前とアイコンを登録してください。' } }); return; }
-    setSelected(product); setOptions({}); setConfirming(product.category !== 'normal_cocktail'); setErrors([]);
+    setSelected(product); setSelectedQuantity(1); setOptions({}); setConfirming(product.category !== 'normal_cocktail'); setErrors([]);
   };
 
   const goConfirm = () => {
@@ -61,16 +62,16 @@ export const MenuPage = () => {
     if (!selected) return;
     const nextErrors = validateOrderOptions(selected.category, options);
     if (nextErrors.length) { setErrors(nextErrors); return; }
-    setCart((current) => addCartItem(current, selected, options));
-    setCartNotice(`${selected.name}をカートに追加しました`);
+    setCart((current) => addCartItem(current, selected, options, selectedQuantity));
+    setCartNotice(`${selected.name} × ${selectedQuantity}をカートに追加しました`);
     window.setTimeout(() => setCartNotice(null), 2400);
     setSelected(null); setOptions({}); setConfirming(false); setErrors([]);
   };
 
-  const addConfiguredToCart = (product: Product, configuredOptions: OrderOptions) => {
+  const addConfiguredToCart = (product: Product, configuredOptions: OrderOptions, quantity = 1) => {
     if (!profile) { navigate('/account', { state: { notice: 'カートへ追加する前に、名前とアイコンを登録してください。' } }); return; }
-    setCart((current) => addCartItem(current, product, configuredOptions));
-    setCartNotice(`${product.name}をカートに追加しました`);
+    setCart((current) => addCartItem(current, product, configuredOptions, quantity));
+    setCartNotice(`${product.name} × ${quantity}をカートに追加しました`);
     window.setTimeout(() => setCartNotice(null), 2400);
     setErrors([]);
   };
@@ -127,6 +128,7 @@ export const MenuPage = () => {
           {confirming && <div className="confirmation-card"><span className="eyebrow">CART ITEM</span><h3>この内容をカートへ入れますか？</h3>
             {selected.category === 'normal_cocktail' && <dl><div><dt>色</dt><dd><span className={`mini-color color-${options.color1}`} />{colorLabels[options.color1!]} ＋ <span className={`mini-color color-${options.color2}`} />{colorLabels[options.color2!]}</dd></div><div><dt>炭酸</dt><dd>{options.carbonated ? 'あり' : 'なし'}</dd></div><div><dt>媚薬</dt><dd>{options.aphrodisiac ? 'あり' : 'なし'}</dd></div></dl>}
             {selected.category !== 'normal_cocktail' && <p>{selected.category === 'original_cocktail' ? 'オリジナルカクテルのレシピはスタッフへ引き継がれます。' : '追加オプションはありません。'}</p>}
+            <QuantitySelector value={selectedQuantity} onChange={setSelectedQuantity} label="注文数" />
           </div>}
           {errors.length > 0 && <div className="error-list">{errors.map((error) => <p key={error}>{error}</p>)}</div>}
           <div className="modal-actions">{confirming && selected.category === 'normal_cocktail' && <button className="secondary-button" type="button" onClick={() => setConfirming(false)}>選び直す</button>}<button className="primary-button" type="button" onClick={() => confirming ? addSelectedToCart() : goConfirm()}>{confirming ? 'カートに入れる' : '内容を確認する'}</button></div>
@@ -149,14 +151,26 @@ const BinaryField = ({ legend, value, onChange }: { legend: string; value: boole
   <fieldset className="field-group binary-field"><legend>{legend}</legend><div className="segmented"><button type="button" className={value === true ? 'selected' : ''} onClick={() => onChange(true)}>あり</button><button type="button" className={value === false ? 'selected' : ''} onClick={() => onChange(false)}>なし</button></div></fieldset>
 );
 
-const NormalCocktailBuilder = ({ product, onAdd }: { product: Product & { category: 'normal_cocktail' }; onAdd: (product: Product, options: OrderOptions) => void }) => {
+const QuantitySelector = ({ value, onChange, label }: { value: number; onChange: (value: number) => void; label: string }) => (
+  <div className="order-quantity-row">
+    <span>{label}</span>
+    <div className="quantity-stepper" aria-label={label}>
+      <button type="button" disabled={value <= 1} onClick={() => onChange(Math.max(1, value - 1))} aria-label={`${label}を1個減らす`}><Minus /></button>
+      <output aria-live="polite">{value}</output>
+      <button type="button" disabled={value >= 99} onClick={() => onChange(Math.min(99, value + 1))} aria-label={`${label}を1個増やす`}><Plus /></button>
+    </div>
+  </div>
+);
+
+const NormalCocktailBuilder = ({ product, onAdd }: { product: Product & { category: 'normal_cocktail' }; onAdd: (product: Product, options: OrderOptions, quantity: number) => void }) => {
   const [builderOptions, setBuilderOptions] = useState<OrderOptions>({});
+  const [quantity, setQuantity] = useState(1);
   const [builderErrors, setBuilderErrors] = useState<string[]>([]);
 
   const add = () => {
     const nextErrors = validateOrderOptions(product.category, builderOptions);
     setBuilderErrors(nextErrors);
-    if (!nextErrors.length) onAdd(product, builderOptions);
+    if (!nextErrors.length) onAdd(product, builderOptions, quantity);
   };
 
   return <article className="normal-builder">
@@ -167,7 +181,7 @@ const NormalCocktailBuilder = ({ product, onAdd }: { product: Product & { catego
       <fieldset className="field-group builder-color-field"><legend><b>02</b>2色目 <small>同色OK</small></legend><div className="color-grid">{cocktailColors.map((color) => <ColorChoice key={color} value={color} selected={builderOptions.color2 === color} onClick={() => setBuilderOptions((current) => ({ ...current, color2: color }))} label="2色目" />)}</div></fieldset>
       <div className="builder-binary-grid"><BinaryField legend="03 炭酸" value={builderOptions.carbonated} onChange={(value) => setBuilderOptions((current) => ({ ...current, carbonated: value }))} /><BinaryField legend="04 媚薬" value={builderOptions.aphrodisiac} onChange={(value) => setBuilderOptions((current) => ({ ...current, aphrodisiac: value }))} /></div>
       {builderErrors.length > 0 && <div className="error-list">{builderErrors.map((error) => <p key={error}>{error}</p>)}</div>}
-      <button className="primary-button builder-add-button" type="button" onClick={add}><ShoppingBag />選択した内容をカートへ追加</button>
+      <div className="builder-order-actions"><QuantitySelector value={quantity} onChange={setQuantity} label="注文数" /><button className="primary-button builder-add-button" type="button" onClick={add}><ShoppingBag />選択した内容をカートへ追加</button></div>
     </div>
   </article>;
 };

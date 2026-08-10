@@ -6,10 +6,11 @@ const sameOptions = (left: OrderOptions, right: OrderOptions) =>
   && left.carbonated === right.carbonated
   && left.aphrodisiac === right.aphrodisiac;
 
-export const addCartItem = (cart: CartItem[], product: Product, options: OrderOptions): CartItem[] => {
+export const addCartItem = (cart: CartItem[], product: Product, options: OrderOptions, quantity = 1): CartItem[] => {
+  if (quantity <= 0) return cart;
   const existing = cart.find((item) => item.product.id === product.id && sameOptions(item.options, options));
-  if (!existing) return [...cart, { id: crypto.randomUUID(), product, options, quantity: 1 }];
-  return cart.map((item) => item.id === existing.id ? { ...item, quantity: item.quantity + 1 } : item);
+  if (!existing) return [...cart, { id: crypto.randomUUID(), product, options, quantity }];
+  return cart.map((item) => item.id === existing.id ? { ...item, quantity: item.quantity + quantity } : item);
 };
 
 export const setCartItemQuantity = (cart: CartItem[], id: string, quantity: number): CartItem[] => {

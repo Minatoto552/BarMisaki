@@ -19,6 +19,13 @@ describe('cart quantity', () => {
     expect(getCartQuantity(twice)).toBe(2);
   });
 
+  it('選択した注文数をまとめてカートへ追加する', () => {
+    const cart = addCartItem([], product, options, 4);
+    expect(cart).toHaveLength(1);
+    expect(cart[0].quantity).toBe(4);
+    expect(getCartQuantity(cart)).toBe(4);
+  });
+
   it('個数を0にするとカートから取り除く', () => {
     const cart = addCartItem([], product, options);
     expect(setCartItemQuantity(cart, cart[0].id, 0)).toEqual([]);
