@@ -24,7 +24,7 @@ export const MenuPage = () => {
   const navigate = useNavigate();
   const [category, setCategory] = useState<ProductCategory>('normal_cocktail');
   const [search, setSearch] = useState('');
-  const [viewMode, setViewMode] = useState<'cards' | 'compact'>('cards');
+  const [viewMode, setViewMode] = useState<'cards' | 'compact'>('compact');
   const [selected, setSelected] = useState<Product | null>(null);
   const [options, setOptions] = useState<OrderOptions>({});
   const [confirming, setConfirming] = useState(false);
@@ -94,7 +94,7 @@ export const MenuPage = () => {
   return (
     <div className="page menu-page">
       <section className="menu-section">
-        <div className="section-title-row"><div><span className="eyebrow">ORDER MENU</span><h2>MENU</h2><p>商品を選択し、カートからまとめて注文。</p></div><div className="menu-tools"><label className="search-box"><Search /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="全カテゴリーから商品を検索" /></label><div className="menu-view-toggle" aria-label="商品表示タイプ"><button type="button" className={viewMode === 'cards' ? 'active' : ''} aria-pressed={viewMode === 'cards'} onClick={() => setViewMode('cards')}><Grid2X2 />現在の表示</button><button type="button" className={viewMode === 'compact' ? 'active' : ''} aria-pressed={viewMode === 'compact'} onClick={() => setViewMode('compact')}><List />商品名のみ</button><small>すべての商品に適用</small></div></div></div>
+        <div className="section-title-row"><div><span className="eyebrow">ORDER MENU</span><h2>MENU</h2><p>商品を選択し、カートからまとめて注文。</p></div><div className="menu-tools"><label className="search-box"><Search /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="全カテゴリーから商品を検索" /></label><div className="menu-view-toggle" aria-label="商品表示タイプ"><button type="button" className={viewMode === 'cards' ? 'active' : ''} aria-pressed={viewMode === 'cards'} onClick={() => setViewMode('cards')}><Grid2X2 />写真あり</button><button type="button" className={viewMode === 'compact' ? 'active' : ''} aria-pressed={viewMode === 'compact'} onClick={() => setViewMode('compact')}><List />商品名のみ</button><small>すべての商品に適用</small></div></div></div>
         <div className="category-tabs-shell"><button className="category-slide-button previous" type="button" onClick={() => slideCategories(-1)} aria-label="前のカテゴリーを見る"><ChevronLeft /></button><div className="tab-list" ref={categoryTabsRef} role="tablist" aria-label="商品カテゴリー">
           {productCategories.map((value) => <button role="tab" aria-selected={category === value} className={category === value ? 'active' : ''} key={value} onClick={(event) => { setCategory(value); event.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); }}>{categoryLabels[value]}<span>{menuProducts.filter((item) => item.category === value && item.isAvailable).length}</span></button>)}
         </div><button className="category-slide-button next" type="button" onClick={() => slideCategories(1)} aria-label="次のカテゴリーを見る"><ChevronRight /></button></div>
