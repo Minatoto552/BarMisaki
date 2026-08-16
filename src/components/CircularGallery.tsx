@@ -8,18 +8,19 @@ export interface CircularGalleryItem {
 }
 
 const CYCLE_MS = 36_000;
+const MAX_FRAME_DELTA_MS = 34;
 
 export const CircularGallery = ({ items }: { items: readonly CircularGalleryItem[] }) => {
   const uniqueItems = useMemo(() => items.filter((item, index) => items.findIndex((candidate) => candidate.src === item.src) === index), [items]);
   const stageRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<Array<HTMLElement | null>>([]);
-  const startTimeRef = useRef<number | null>(null);
+  const elapsedTimeRef = useRef(0);
   const [active, setActive] = useState(false);
 
   useEffect(() => {
     const stage = stageRef.current;
     if (!stage) return undefined;
-    const observer = new IntersectionObserver(([entry]) => setActive(entry.isIntersecting), { threshold: 0.01 });
+    const observer = new IntersectionObserver(([entry]) => setActive(entry.isIntersecting), { rootMargin: '240px 0px', threshold: 0.01 });
     observer.observe(stage);
     return () => observer.disconnect();
   }, []);
@@ -31,11 +32,14 @@ export const CircularGallery = ({ items }: { items: readonly CircularGalleryItem
     if (!stage || !nodes.length) return undefined;
 
     let animationFrame = 0;
+    let measureFrame = 0;
     let geometry = createLoopGeometry(1, 1, 1, 1, nodes.length);
     let itemOffsets = nodes.map((_, index) => index / nodes.length);
+    let itemSizes = nodes.map(() => ({ width: 1, height: 1 }));
     const measure = () => {
       const stageRect = stage.getBoundingClientRect();
       const cardRects = nodes.map((node) => node.getBoundingClientRect());
+      itemSizes = cardRects.map((rect) => ({ width: rect.width, height: rect.height }));
       const itemWidth = Math.max(...cardRects.map((rect) => rect.width));
       const itemHeight = Math.max(...cardRects.map((rect) => rect.height));
       const totalCardWidth = cardRects.reduce((sum, rect) => sum + rect.width, 0);
@@ -52,26 +56,30 @@ export const CircularGallery = ({ items }: { items: readonly CircularGalleryItem
     };
     measure();
 
-    if (startTimeRef.current === null) startTimeRef.current = performance.now();
+    let lastFrameTime = performance.now();
     const animate = (now: number) => {
-      const baseProgress = ((now - (startTimeRef.current ?? now)) % CYCLE_MS) / CYCLE_MS;
+      const frameDelta = Math.min(Math.max(0, now - lastFrameTime), MAX_FRAME_DELTA_MS);
+      lastFrameTime = now;
+      elapsedTimeRef.current = (elapsedTimeRef.current + frameDelta) % CYCLE_MS;
+      const baseProgress = elapsedTimeRef.current / CYCLE_MS;
       nodes.forEach((node, index) => {
         const progress = (baseProgress + itemOffsets[index]) % 1;
         const point = getLoopPoint(progress, geometry);
-        const width = node.offsetWidth;
-        const height = node.offsetHeight;
+        const { width, height } = itemSizes[index];
         node.style.transform = `translate3d(${point.x - width / 2}px, ${point.y - height / 2}px, 0)`;
-        node.dataset.lane = point.lane;
-        node.dataset.progress = progress.toFixed(6);
       });
       animationFrame = requestAnimationFrame(animate);
     };
 
-    const resizeObserver = new ResizeObserver(measure);
+    const resizeObserver = new ResizeObserver(() => {
+      cancelAnimationFrame(measureFrame);
+      measureFrame = requestAnimationFrame(measure);
+    });
     resizeObserver.observe(stage);
     animationFrame = requestAnimationFrame(animate);
     return () => {
       resizeObserver.disconnect();
+      cancelAnimationFrame(measureFrame);
       cancelAnimationFrame(animationFrame);
     };
   }, [active, uniqueItems]);
