@@ -33,12 +33,17 @@ import type {
 } from '../types';
 import { getFirebaseServices, runtimeMode } from './firebase';
 import { sampleProducts } from './sample-data';
+import { validateProduct } from './validation';
 
 interface ProductDraft {
   category: ProductCategory;
   name: string;
   recipe: string;
   image: File;
+}
+
+export interface ProductEditDraft extends Omit<ProductDraft, 'image'> {
+  image: File | null;
 }
 
 type ProductWithoutId = Omit<NormalCocktailProduct, 'id'> | Omit<OriginalCocktailProduct, 'id'> | Omit<JuiceProduct, 'id'> | Omit<FoodProduct, 'id'>;
@@ -57,6 +62,8 @@ interface DataContextValue {
   runtimeMode: typeof runtimeMode;
   saveProfile: (displayName: string, image: File) => Promise<void>;
   addProduct: (draft: ProductDraft) => Promise<void>;
+  updateProduct: (id: string, draft: ProductEditDraft, expectedUpdatedAt: string) => Promise<void>;
+  deleteProduct: (id: string, expectedUpdatedAt: string) => Promise<void>;
   placeCart: (items: CartItem[], tableNumber: string) => Promise<string>;
   sendEmergency: (kind: EmergencyKind, message: string) => Promise<void>;
   sendAnnouncement: (kind: AnnouncementKind, message: string) => Promise<void>;
@@ -116,6 +123,11 @@ const compressImage = async (file: File, maxSide = 720, quality = 0.72): Promise
 
 const makeId = () => crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 const nowIso = () => new Date().toISOString();
+
+const assertProductRevision = (product: Product | undefined, expectedUpdatedAt: string) => {
+  if (!product) throw new Error('この商品はすでに削除されています。商品一覧をご確認ください。');
+  if (product.updatedAt !== expectedUpdatedAt) throw new Error('他の端末で商品が変更されました。一度閉じて最新の商品を選び直してください。');
+};
 
 export const DataProvider = ({ children }: { children: ReactNode }) => {
   const [ready, setReady] = useState(runtimeMode === 'sample');
@@ -267,6 +279,61 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [products, requireProfile, uploadImage]);
 
+  const updateProduct = useCallback(async (id: string, draft: ProductEditDraft, expectedUpdatedAt: string) => {
+    requireProfile();
+    const existing = products.find((product) => product.id === id);
+    assertProductRevision(existing, expectedUpdatedAt);
+    const errors = validateProduct(draft.category, draft.name, draft.image, draft.recipe, existing?.imageUrl);
+    if (errors.length) throw new Error(errors.join('\n'));
+    throttle();
+    const imageUrl = draft.image ? await uploadImage(draft.image, `products/${id}`) : undefined;
+    const updatedAt = nowIso();
+    const changes = {
+      name: draft.name.trim(), category: draft.category, updatedAt,
+      ...(imageUrl ? { imageUrl } : {}),
+    };
+    const { db, firestoreApi } = await getFirebaseServices();
+    if (db && firestoreApi) {
+      const productRef = firestoreApi.doc(db, 'products', id);
+      await firestoreApi.runTransaction(db, async (transaction) => {
+        const snapshot = await transaction.get(productRef);
+        assertProductRevision(snapshot.exists() ? { id, ...snapshot.data() } as Product : undefined, expectedUpdatedAt);
+        // Update only editable fields. Never recreate a deleted item or overwrite its creator.
+        transaction.update(productRef, {
+          ...changes,
+          recipe: draft.category === 'original_cocktail' ? draft.recipe.trim() : firestoreApi.deleteField(),
+        });
+      });
+    } else {
+      const current = readJson<Product[]>(KEYS.products, products);
+      assertProductRevision(current.find((product) => product.id === id), expectedUpdatedAt);
+      writeJson(KEYS.products, current.map((product) => {
+        if (product.id !== id) return product;
+        const { id: productId, imageUrl: previousImage, createdBy, creatorName, isAvailable, createdAt } = product;
+        const base = { id: productId, imageUrl: imageUrl || previousImage, createdBy, creatorName, isAvailable, createdAt, ...changes };
+        return draft.category === 'original_cocktail' ? { ...base, category: draft.category, recipe: draft.recipe.trim() } : { ...base, category: draft.category };
+      }));
+    }
+  }, [products, requireProfile, uploadImage]);
+
+  const deleteProduct = useCallback(async (id: string, expectedUpdatedAt: string) => {
+    requireProfile();
+    throttle();
+    const { db, firestoreApi } = await getFirebaseServices();
+    if (db && firestoreApi) {
+      const productRef = firestoreApi.doc(db, 'products', id);
+      await firestoreApi.runTransaction(db, async (transaction) => {
+        const snapshot = await transaction.get(productRef);
+        assertProductRevision(snapshot.exists() ? { id, ...snapshot.data() } as Product : undefined, expectedUpdatedAt);
+        transaction.delete(productRef);
+      });
+    } else {
+      const current = readJson<Product[]>(KEYS.products, products);
+      assertProductRevision(current.find((product) => product.id === id), expectedUpdatedAt);
+      writeJson(KEYS.products, current.filter((product) => product.id !== id));
+    }
+  }, [products, requireProfile]);
+
   const placeCart = useCallback(async (items: CartItem[], tableNumber: string) => {
     throttle();
     const current = requireProfile();
@@ -348,9 +415,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   const value = useMemo<DataContextValue>(() => ({
     ready, error, uid: user?.uid || localUid, profile, products, orders, emergencies, announcements, isStaff,
-    runtimeMode, saveProfile, addProduct, placeCart, sendEmergency, sendAnnouncement, updateEmergency, updateOrder,
+    runtimeMode, saveProfile, addProduct, updateProduct, deleteProduct, placeCart, sendEmergency, sendAnnouncement, updateEmergency, updateOrder,
   }), [addProduct, announcements, emergencies, error, isStaff, localUid, orders, products, profile, ready,
-    saveProfile, sendAnnouncement, sendEmergency, updateEmergency, updateOrder, user?.uid, placeCart]);
+    saveProfile, sendAnnouncement, sendEmergency, updateEmergency, updateOrder, user?.uid, placeCart, updateProduct, deleteProduct]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 };

@@ -1,4 +1,4 @@
-import { AlertTriangle, Bell, ChevronDown, ChevronRight, ChevronUp, CircleUserRound, ClipboardList, Coffee, House, Plus, Send } from 'lucide-react';
+import { AlertTriangle, Bell, ChevronDown, ChevronRight, ChevronUp, CircleUserRound, ClipboardList, Coffee, House, Pencil, Plus, Send } from 'lucide-react';
 import { useEffect, useMemo, useState, type CSSProperties, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -93,7 +93,7 @@ export const HomePage = () => {
 
     <footer className="home-footer-tools">
       <div className="home-shortcuts"><span className="eyebrow light">SHORTCUTS</span><h2>各項目へ移動</h2><nav aria-label="ホームショートカット">
-        <Link to="/"><House />ホーム</Link><Link to="/menu"><Coffee />注文</Link><Link to="/orders"><ClipboardList />注文管理</Link><Link to="/add"><Plus />商品追加</Link><Link to="/account"><CircleUserRound />アカウント</Link>
+        <Link to="/"><House />ホーム</Link><Link to="/menu"><Coffee />注文</Link><Link to="/orders"><ClipboardList />注文管理</Link><Link to="/add"><Plus />商品追加</Link><Link to="/products"><Pencil />商品編集</Link><Link to="/account"><CircleUserRound />アカウント</Link>
       </nav></div>
       <form className="announcement-composer" onSubmit={(event) => void submitAnnouncement(event)}>
         <span className="eyebrow light">SEND ANNOUNCEMENT</span><h2>お知らせを送信</h2><p>送信後、一覧への追加と同時に全員の画面上部へ20秒間表示します。</p>

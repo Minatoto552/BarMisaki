@@ -1,4 +1,4 @@
-import { CircleUserRound, ClipboardList, Coffee, House, Plus, Radio } from 'lucide-react';
+import { CircleUserRound, ClipboardList, Coffee, House, Pencil, Plus, Radio } from 'lucide-react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useEffect } from 'react';
 
@@ -12,6 +12,7 @@ const links = [
   { to: '/menu', label: '注文', icon: Coffee },
   { to: '/orders', label: '注文管理', icon: ClipboardList },
   { to: '/add', label: '商品追加', icon: Plus },
+  { to: '/products', label: '商品編集', icon: Pencil },
   { to: '/account', label: 'アカウント', icon: CircleUserRound },
 ];
 

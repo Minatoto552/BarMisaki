@@ -11,6 +11,9 @@ const AccountPage = lazy(() =>
 const AddProductPage = lazy(() =>
   import('./pages/AddProductPage').then(({ AddProductPage: Page }) => ({ default: Page })),
 );
+const EditProductsPage = lazy(() =>
+  import('./pages/EditProductsPage').then(({ EditProductsPage: Page }) => ({ default: Page })),
+);
 const MenuPage = lazy(() =>
   import('./pages/MenuPage').then(({ MenuPage: Page }) => ({ default: Page })),
 );
@@ -38,6 +41,7 @@ const App = () => (
       <Route path="menu" element={deferred(<MenuPage />)} />
       <Route path="orders" element={deferred(<OrdersPage />)} />
       <Route path="add" element={deferred(<AddProductPage />)} />
+      <Route path="products" element={deferred(<EditProductsPage />)} />
       <Route path="account" element={deferred(<AccountPage />)} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Route>

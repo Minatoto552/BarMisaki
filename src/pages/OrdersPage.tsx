@@ -2,6 +2,7 @@ import { AlertTriangle, BellRing, CheckCircle2, ChefHat, Clock3, Eye, Radio, Use
 import { useEffect, useMemo, useState } from 'react';
 
 import { Modal } from '../components/Modal';
+import { RecipeViewer } from '../components/RecipeViewer';
 import { useData } from '../lib/data';
 import { groupOrdersByCart, matchesOrderGroupFilter, type OrderGroup } from '../lib/order-groups';
 import { getCurrentServiceDayStart } from '../lib/service-day';
@@ -54,7 +55,7 @@ export const OrdersPage = () => {
         {visible.length ? <div className="order-list">{visible.map((group) => <OrderGroupTicket key={group.id} group={group} isStaff={isStaff} onStatus={(status) => void updateGroupStatus(group, status)} onRecipe={setRecipeOrder} />)}</div> : <div className="empty-state"><div className="empty-icon"><ChefHat /></div><h3>該当する注文はありません</h3><p>新しい注文が入ると、ここへ自動で表示されます。</p></div>}
       </section>
 
-      {recipeOrder?.category === 'original_cocktail' && <Modal title={`${recipeOrder.productName}のレシピ`} onClose={() => setRecipeOrder(null)}><div className="recipe-modal"><div className="order-product-summary"><img src={recipeOrder.productImageUrl} alt="" /><div><span>受付番号 #{recipeOrder.receiptNumber}</span><h3>{recipeOrder.productName}</h3></div></div><div className="recipe-paper"><span>RECIPE</span><p>{recipeOrder.recipe}</p></div><button className="primary-button" onClick={() => setRecipeOrder(null)}>レシピを閉じる</button></div></Modal>}
+      {recipeOrder?.category === 'original_cocktail' && <RecipeViewer order={recipeOrder} onClose={() => setRecipeOrder(null)} />}
       {emergencyDetail && <Modal title="緊急通知の詳細" onClose={() => setEmergencyDetail(null)}><div className="emergency-detail"><div className="alert-note"><AlertTriangle /><p><strong>{emergencyKindLabels[emergencyDetail.kind]}</strong><br />{emergencyDetail.creatorName}・{formatTime(emergencyDetail.createdAt)}</p></div><dl><div><dt>補足</dt><dd>{emergencyDetail.message || 'なし'}</dd></div><div><dt>状態</dt><dd>{emergencyDetail.status === 'active' ? '未確認' : '対応中'}</dd></div></dl><button className="primary-button" onClick={() => { void updateEmergency(emergencyDetail.id, emergencyDetail.status === 'active' ? 'acknowledged' : 'resolved'); setEmergencyDetail(null); }}>{emergencyDetail.status === 'active' ? '対応を開始する' : '解決済みにする'}</button></div></Modal>}
     </div>
   );
