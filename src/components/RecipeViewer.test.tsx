@@ -13,6 +13,20 @@ const order: OriginalCocktailOrder = {
 
 afterEach(cleanup);
 describe('RecipeViewer', () => {
+  it('注文時の完成品写真をレシピと同時に表示する', () => {
+    render(<RecipeViewer order={order} onClose={vi.fn()} />);
+    expect(screen.getByRole('img', { name: '星空の完成品' })).toHaveAttribute('src', order.productImageUrl);
+    expect(screen.getByText('完成品の参考写真')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'レシピ本文' }).textContent).toBe(order.recipe);
+  });
+
+  it('写真が読み込めなくてもレシピを表示し続ける', () => {
+    render(<RecipeViewer order={order} onClose={vi.fn()} />);
+    fireEvent.error(screen.getByRole('img', { name: '星空の完成品' }));
+    expect(screen.getByText('完成品の写真を表示できません。')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'レシピ本文' }).textContent).toBe(order.recipe);
+  });
+
   it('全画面ダイアログに注文時のレシピを大きく表示する', () => {
     render(<RecipeViewer order={order} onClose={vi.fn()} />);
     expect(screen.getByRole('dialog')).toHaveClass('modal-fullscreen');
