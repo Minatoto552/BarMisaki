@@ -51,11 +51,14 @@ describe('アカウント', () => {
 });
 
 describe('テーブル番号', () => {
-  it('注文時に必須とし、1〜8だけを許可する', () => {
+  it('注文時に必須とし、1〜18だけを許可する', () => {
     expect(validateTableNumber('')).toBeTruthy();
     expect(validateTableNumber('1')).toBeNull();
     expect(validateTableNumber('8')).toBeNull();
-    expect(validateTableNumber('9')).toBeTruthy();
+    expect(validateTableNumber('9')).toBeNull();
+    expect(validateTableNumber('18')).toBeNull();
+    expect(validateTableNumber('0')).toBeTruthy();
+    expect(validateTableNumber('19')).toBeTruthy();
     expect(validateTableNumber('A-1')).toBeTruthy();
   });
 });

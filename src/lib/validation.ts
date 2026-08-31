@@ -1,4 +1,5 @@
 import type { CocktailColor, OrderOptions, ProductCategory } from '../types';
+import { isTableNumber } from './table-numbers';
 
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 export const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
@@ -52,6 +53,6 @@ export const validateOrderOptions = (category: ProductCategory, options: OrderOp
 export const validateTableNumber = (value: string): string | null => {
   const normalized = value.trim();
   if (!normalized) return 'テーブル番号を選択してください。';
-  if (!/^[1-8]$/.test(normalized)) return 'テーブル番号は1〜8から選択してください。';
+  if (!isTableNumber(normalized)) return 'テーブル番号は1〜18から選択してください。';
   return null;
 };

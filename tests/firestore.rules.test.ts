@@ -20,10 +20,10 @@ const profile = (uid: string) => ({
   updatedAt: timestamp,
 });
 
-const order = (uid: string) => ({
+const order = (uid: string, tableNumber = '18') => ({
   receiptNumber: '12345',
   cartId: 'cart-1',
-  tableNumber: 'A-3',
+  tableNumber,
   productId: 'drink-1',
   productName: 'テストドリンク',
   productImageUrl: 'https://example.com/drink.png',
@@ -62,6 +62,18 @@ describe('Firestore Security Rules', () => {
     });
     const alice = environment.authenticatedContext('alice').firestore();
     await assertSucceeds(addDoc(collection(alice, 'orders'), order('alice')));
+  });
+
+  it('テーブル番号は1〜18だけを許可する', async () => {
+    await environment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'users/alice'), profile('alice'));
+    });
+    const alice = environment.authenticatedContext('alice').firestore();
+    await assertSucceeds(addDoc(collection(alice, 'orders'), order('alice', '1')));
+    await assertSucceeds(addDoc(collection(alice, 'orders'), order('alice', '18')));
+    await assertFails(addDoc(collection(alice, 'orders'), order('alice', '0')));
+    await assertFails(addDoc(collection(alice, 'orders'), order('alice', '19')));
+    await assertFails(addDoc(collection(alice, 'orders'), order('alice', 'A-3')));
   });
 
   it('色が不足したノーマルカクテル注文を拒否する', async () => {

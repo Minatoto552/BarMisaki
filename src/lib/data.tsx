@@ -33,7 +33,7 @@ import type {
 } from '../types';
 import { getFirebaseServices, runtimeMode } from './firebase';
 import { sampleProducts } from './sample-data';
-import { validateProduct } from './validation';
+import { validateProduct, validateTableNumber } from './validation';
 
 interface ProductDraft {
   category: ProductCategory;
@@ -335,6 +335,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   }, [products, requireProfile]);
 
   const placeCart = useCallback(async (items: CartItem[], tableNumber: string) => {
+    const tableError = validateTableNumber(tableNumber);
+    if (tableError) throw new Error(tableError);
     throttle();
     const current = requireProfile();
     const timestamp = nowIso();

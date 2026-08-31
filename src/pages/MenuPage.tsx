@@ -7,6 +7,7 @@ import { useData } from '../lib/data';
 import { addCartItem, getCartQuantity, setCartItemQuantity } from '../lib/cart';
 import { builtInNormalCocktail } from '../lib/sample-data';
 import { filterMenuProducts } from '../lib/menu-search';
+import { TABLE_NUMBERS } from '../lib/table-numbers';
 import { validateOrderOptions, validateTableNumber } from '../lib/validation';
 import {
   categoryLabels, cocktailColors, colorLabels, productCategories,
@@ -138,7 +139,7 @@ export const MenuPage = () => {
       {cartOpen && <Modal title={receiptNumber ? '注文完了' : `カート（${cartQuantity}点）`} onClose={closeCart} wide>
         {receiptNumber ? <div className="success-state"><div className="success-icon"><Check /></div><span className="eyebrow">ORDER NUMBER</span><h3>受付番号 #{receiptNumber}</h3><p>BarMisakiへ注文を送信しました。<br />テーブルまでお届けします。</p><button className="primary-button" onClick={closeCart}>メニューへ戻る</button></div> : <div className="cart-checkout">
           {cart.length ? <div className="cart-list">{cart.map((item) => <article className="cart-item" key={item.id}><img src={item.product.imageUrl} alt="" /><div><span>{categoryLabels[item.product.category]}</span><h3>{item.product.name}</h3>{item.product.category === 'normal_cocktail' && <p><i className={`mini-color color-${item.options.color1}`} />{colorLabels[item.options.color1!]} ＋ <i className={`mini-color color-${item.options.color2}`} />{colorLabels[item.options.color2!]} ／ 炭酸 {item.options.carbonated ? 'あり' : 'なし'} ／ 媚薬 {item.options.aphrodisiac ? 'あり' : 'なし'}</p>}</div><div className="quantity-stepper" aria-label={`${item.product.name}の個数`}><button type="button" onClick={() => setCart((current) => setCartItemQuantity(current, item.id, item.quantity - 1))} aria-label="1個減らす"><Minus /></button><output aria-live="polite">{item.quantity}</output><button type="button" onClick={() => setCart((current) => setCartItemQuantity(current, item.id, item.quantity + 1))} aria-label="1個増やす"><Plus /></button></div></article>)}</div> : <div className="cart-empty"><ShoppingBag /><h3>カートは空です</h3><p>メニューから商品を追加してください。</p></div>}
-          <fieldset className="table-number-field"><legend>テーブル番号 <b>必須</b></legend><div className="table-number-grid">{Array.from({ length: 8 }, (_, index) => String(index + 1)).map((number) => <button type="button" key={number} className={tableNumber === number ? 'selected' : ''} aria-pressed={tableNumber === number} onClick={() => setTableNumber(number)}>{number}</button>)}</div><em>お届け先のテーブル番号を1〜8から選択してください。</em></fieldset>
+          <fieldset className="table-number-field"><legend>テーブル番号 <b>必須</b></legend><div className="table-number-grid">{TABLE_NUMBERS.map((number) => <button type="button" key={number} className={tableNumber === number ? 'selected' : ''} aria-pressed={tableNumber === number} onClick={() => setTableNumber(number)}>{number}</button>)}</div><em>お届け先のテーブル番号を1〜18から選択してください。</em></fieldset>
           {errors.length > 0 && <div className="error-list">{errors.map((error) => <p key={error}>{error}</p>)}</div>}
           <button className="primary-button cart-submit" type="button" disabled={busy || !cartQuantity} onClick={() => void checkout()}>{busy ? '注文を送信中…' : `${cartQuantity}点を注文する`}</button>
         </div>}

@@ -2,7 +2,7 @@ import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DataProvider, useData } from './data';
-import type { Product } from '../types';
+import type { CartItem, Product } from '../types';
 
 const mocks = vi.hoisted(() => ({ services: vi.fn() }));
 vi.mock('./firebase', () => ({ runtimeMode: 'sample', getFirebaseServices: mocks.services }));
@@ -22,6 +22,14 @@ beforeEach(() => {
 afterEach(() => { cleanup(); localStorage.clear(); });
 
 describe('商品データの更新・削除', () => {
+  it('注文のテーブル番号を1〜18に制限する', async () => {
+    const { result } = renderHook(useData, { wrapper: DataProvider });
+    const item: CartItem = { id: 'cart-item', product, options: {}, quantity: 1 };
+    await expect(result.current.placeCart([item], '19')).rejects.toThrow('1〜18');
+    await act(() => result.current.placeCart([item], '18'));
+    expect(result.current.orders[0]).toMatchObject({ tableNumber: '18', productName: product.name });
+  });
+
   it('画像と登録者を維持し、別カテゴリーへ変更したらレシピを除く', async () => {
     const { result } = renderHook(useData, { wrapper: DataProvider });
     await act(() => result.current.updateProduct('drink', { name: ' 新しいジュース ', category: 'juice', recipe: '旧レシピ', image: null }, 'revision-1'));
