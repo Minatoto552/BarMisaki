@@ -50,6 +50,15 @@ beforeEach(async () => environment?.clearFirestore());
 afterAll(async () => environment?.cleanup());
 
 describe('Firestore Security Rules', () => {
+  it('商品画像は空文字を許可し、文字列以外は拒否する', async () => {
+    await environment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'users/alice'), profile('alice'));
+    });
+    const alice = environment.authenticatedContext('alice').firestore();
+    const product = { name: 'お水', category: 'juice', imageUrl: '', createdBy: 'alice', creatorName: 'テスト', isAvailable: true, createdAt: timestamp, updatedAt: timestamp };
+    await assertSucceeds(addDoc(collection(alice, 'products'), product));
+    await assertFails(addDoc(collection(alice, 'products'), { ...product, imageUrl: 123 }));
+  });
   it('本人だけが自分の簡易プロフィールを登録できる', async () => {
     const alice = environment.authenticatedContext('alice').firestore();
     await assertSucceeds(setDoc(doc(alice, 'users/alice'), profile('alice')));

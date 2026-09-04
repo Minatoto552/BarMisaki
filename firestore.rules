@@ -29,7 +29,7 @@ service cloud.firestore {
         && request.resource.data.createdBy == request.auth.uid
         && request.resource.data.category in ['normal_cocktail', 'original_cocktail', 'juice', 'food']
         && shortString(request.resource.data.name, 60)
-        && shortString(request.resource.data.imageUrl, 320000)
+        && request.resource.data.imageUrl is string && request.resource.data.imageUrl.size() <= 320000
         && request.resource.data.isAvailable is bool
         && (
           (request.resource.data.category == 'original_cocktail'

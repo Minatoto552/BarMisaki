@@ -39,7 +39,7 @@ interface ProductDraft {
   category: ProductCategory;
   name: string;
   recipe: string;
-  image: File;
+  image: File | null;
 }
 
 export interface ProductEditDraft extends Omit<ProductDraft, 'image'> {
@@ -264,7 +264,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const addProduct = useCallback(async (draft: ProductDraft) => {
     throttle();
     const current = requireProfile();
-    const imageUrl = await uploadImage(draft.image, `products/${current.id}`);
+    const errors = validateProduct(draft.category, draft.name, draft.image, draft.recipe);
+    if (errors.length) throw new Error(errors.join('\n'));
+    const imageUrl = draft.image ? await uploadImage(draft.image, `products/${current.id}`) : '';
     const timestamp = nowIso();
     const base = {
       name: draft.name.trim(), imageUrl, createdBy: current.id, creatorName: current.displayName,
@@ -285,7 +287,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     requireProfile();
     const existing = products.find((product) => product.id === id);
     assertProductRevision(existing, expectedUpdatedAt);
-    const errors = validateProduct(draft.category, draft.name, draft.image, draft.recipe, existing?.imageUrl);
+    const errors = validateProduct(draft.category, draft.name, draft.image, draft.recipe);
     if (errors.length) throw new Error(errors.join('\n'));
     throttle();
     const imageUrl = draft.image ? await uploadImage(draft.image, `products/${id}`) : undefined;
@@ -322,7 +324,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const current = requireProfile();
     const source = products.find(product => product.id === id);
     assertProductRevision(source, expectedUpdatedAt);
-    const errors = validateProduct(draft.category, draft.name, draft.image, draft.recipe, source?.imageUrl);
+    const errors = validateProduct(draft.category, draft.name, draft.image, draft.recipe);
     if (errors.length) throw new Error(errors.join('\n'));
     throttle();
     const imageUrl = draft.image ? await uploadImage(draft.image, `products/${current.id}`) : source!.imageUrl;

@@ -1,4 +1,16 @@
-import { Check, Minus, Plus, Search, ShoppingBag } from "lucide-react";
+import {
+  Check,
+  Minus,
+  Plus,
+  Search,
+  ShoppingBag,
+  List,
+  LayoutGrid,
+} from "lucide-react";
+import {
+  OrderProductCard,
+  type ProductViewMode,
+} from "../components/OrderProductCard";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Modal } from "../components/Modal";
@@ -23,7 +35,24 @@ export const MenuPage = () => {
   const navigate = useNavigate();
   const [category, setCategory] = useState<ProductCategory | "all">("all");
   const [search, setSearch] = useState("");
-  const [popular, setPopular] = useState(false);
+  const [sort, setSort] = useState("default");
+  const [viewMode, setViewMode] = useState<ProductViewMode>(() => {
+    try {
+      return localStorage.getItem("barmisaki-product-view") === "image"
+        ? "image"
+        : "compact";
+    } catch {
+      return "compact";
+    }
+  });
+  const changeView = (mode: ProductViewMode) => {
+    setViewMode(mode);
+    try {
+      localStorage.setItem("barmisaki-product-view", mode);
+    } catch {
+      /* Private browsing may disable storage. */
+    }
+  };
   const [selected, setSelected] = useState<Product | null>(null);
   const [options, setOptions] = useState<OrderOptions>({});
   const [quantity, setQuantity] = useState(1);
@@ -60,7 +89,16 @@ export const MenuPage = () => {
   );
   const visible = useMemo(() => {
     const items = filterMenuProducts(allProducts, category, search);
-    if (!popular) return items;
+    if (sort === "default") return items;
+    if (sort === "name")
+      return [...items].sort((a, b) => a.name.localeCompare(b.name, "ja"));
+    if (sort === "category")
+      return [...items].sort(
+        (a, b) =>
+          productCategories.indexOf(a.category) -
+            productCategories.indexOf(b.category) ||
+          a.name.localeCompare(b.name, "ja"),
+      );
     const counts = new Map<string, number>();
     orders.forEach((o) =>
       counts.set(o.productId, (counts.get(o.productId) || 0) + 1),
@@ -68,7 +106,7 @@ export const MenuPage = () => {
     return [...items].sort(
       (a, b) => (counts.get(b.id) || 0) - (counts.get(a.id) || 0),
     );
-  }, [allProducts, category, search, popular, orders]);
+  }, [allProducts, category, search, sort, orders]);
   const add = (product: Product, choices: OrderOptions = {}, amount = 1) => {
     cart.add(product, choices, amount);
     setNotice(`${product.name} ×${amount} をカートに追加しました`);
@@ -169,51 +207,53 @@ export const MenuPage = () => {
             </div>
             <label className="sort-label">
               並び順
-              <select
-                value={popular ? "popular" : "default"}
-                onChange={(e) => setPopular(e.target.value === "popular")}
-              >
+              <select value={sort} onChange={(e) => setSort(e.target.value)}>
                 <option value="default">登録順</option>
+                <option value="name">名前順</option>
+                <option value="category">カテゴリー順</option>
                 <option value="popular">よく注文される順</option>
               </select>
             </label>
           </div>
           <div className="catalog-caption">
             <span>{search ? "全カテゴリーの検索結果" : "メニュー"}</span>
-            <span>{visible.length}商品</span>
+            <div className="catalog-view-tools">
+              <span>{visible.length}商品</span>
+              <div
+                className="product-view-switch"
+                role="group"
+                aria-label="商品の表示方法"
+              >
+                <button
+                  aria-pressed={viewMode === "compact"}
+                  onClick={() => changeView("compact")}
+                >
+                  <List />
+                  コンパクト
+                </button>
+                <button
+                  aria-pressed={viewMode === "image"}
+                  onClick={() => changeView("image")}
+                >
+                  <LayoutGrid />
+                  画像
+                </button>
+              </div>
+            </div>
           </div>
           {!ready ? (
             <p role="status">商品を読み込んでいます…</p>
           ) : visible.length ? (
-            <div className="pos-product-grid">
+            <div
+              className={`pos-product-grid ${viewMode === "compact" ? "compact-product-grid" : "image-product-grid"}`}
+            >
               {visible.map((product) => (
-                <button
-                  className="pos-product-card"
+                <OrderProductCard
                   key={product.id}
-                  onClick={() => choose(product)}
-                  aria-label={`${product.name}${product.category === "normal_cocktail" ? "をカスタマイズ" : "をカートに追加"}`}
-                >
-                  <div className="pos-product-image">
-                    <img
-                      src={product.imageUrl}
-                      alt=""
-                      loading="lazy"
-                      decoding="async"
-                    />
-                    <span className="add-cue">
-                      <Plus />
-                    </span>
-                  </div>
-                  <div className="pos-product-copy">
-                    <small>{categoryLabels[product.category]}</small>
-                    <strong>{product.name}</strong>
-                    <span>
-                      {product.category === "normal_cocktail"
-                        ? "色・オプションを選択"
-                        : "タップして追加"}
-                    </span>
-                  </div>
-                </button>
+                  product={product}
+                  mode={viewMode}
+                  onChoose={choose}
+                />
               ))}
             </div>
           ) : (

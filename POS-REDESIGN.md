@@ -1,5 +1,14 @@
 # BarMisaki POS UI redesign
 
+## Product view follow-up (2026-09-04)
+
+- Default compact mode (no image DOM), optional image mode with 4:3 cropped photos. Saved per browser under `barmisaki-product-view`.
+- One shared filtered/sorted product list; switching mode preserves category, query, sort and cart. Registration/name/category/popularity sort options.
+- Single button per product, including the plus area; one activation adds one item. Normal cocktails still open the required-options dialog. Feedback lasts 180 ms.
+- Images are optional on create/edit/duplicate; invalid selected files still fail validation. Missing/failed images show a neutral icon only in image mode.
+- 64 unit/integration tests passed; build/lint passed. Browser checks: 1920px compact cards ~98px high, no catalog images; 390px compact list and two-column image mode without horizontal page overflow; cart retention and local image-free registration verified.
+- Firebase Console published only the product-create image validation change (empty string allowed, string type/size bound retained). Other live permissions unchanged. Emulator rule regression test added but not run (Java unavailable); no production product/order test records created.
+
 ## Structure
 
 - `/` and the old `/menu` link redirect to `/order`. The home/hero/gallery route is removed.

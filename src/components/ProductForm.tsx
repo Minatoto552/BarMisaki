@@ -40,13 +40,7 @@ export const ProductForm = ({
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (busy) return;
-    const next = validateProduct(
-      category,
-      name,
-      image,
-      recipe,
-      product?.imageUrl,
-    );
+    const next = validateProduct(category, name, image, recipe);
     setErrors(next);
     if (next.length) return;
     setBusy(true);
@@ -56,7 +50,7 @@ export const ProductForm = ({
         await duplicateProduct(product.id, draft, product.updatedAt);
       else if (product)
         await updateProduct(product.id, draft, product.updatedAt);
-      else await addProduct({ ...draft, image: image! });
+      else await addProduct(draft);
       onSaved();
     } catch (reason) {
       setErrors([
@@ -102,7 +96,7 @@ export const ProductForm = ({
             />
           </label>
           <div className="field">
-            <span>商品画像 {!product && <b>必須</b>}</span>
+            <span>商品画像（任意）</span>
             <ImageField
               file={image}
               onChange={setImage}

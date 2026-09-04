@@ -112,7 +112,16 @@ export const EditProductsPage = () => {
           {visible.map((product) => (
             <article className="product-row" key={product.id}>
               <div className="product-identity">
-                <img src={product.imageUrl} alt="" loading="lazy" />
+                {product.imageUrl ? (
+                  <img src={product.imageUrl} alt="" loading="lazy" />
+                ) : (
+                  <span
+                    className="management-image-placeholder"
+                    aria-label="商品画像なし"
+                  >
+                    —
+                  </span>
+                )}
                 <div>
                   <h2>{product.name}</h2>
                   {!product.isAvailable && <small>非表示</small>}

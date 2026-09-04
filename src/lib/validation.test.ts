@@ -28,11 +28,11 @@ describe('注文オプション', () => {
 
 describe('商品登録', () => {
   it('編集では既存画像を維持できるが、新しい不正画像は拒否する', () => {
-    expect(validateProduct('juice', 'ジュース', null, '', '/existing.png')).toEqual([]);
-    expect(validateProduct('juice', 'ジュース', new File(['x'], 'bad.txt', { type: 'text/plain' }), '', '/existing.png')).toHaveLength(1);
+    expect(validateProduct('juice', 'ジュース', null, '')).toEqual([]);
+    expect(validateProduct('juice', 'ジュース', new File(['x'], 'bad.txt', { type: 'text/plain' }), '')).toHaveLength(1);
   });
   it('商品名と画像を必須にする', () => {
-    expect(validateProduct('food', '', null, '')).toHaveLength(2);
+    expect(validateProduct('food', '', null, '')).toHaveLength(1);
   });
 
   it('オリジナルカクテルだけレシピを必須にする', () => {

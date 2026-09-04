@@ -23,13 +23,12 @@ export const validateProduct = (
   name: string,
   image: File | null,
   recipe: string,
-  existingImageUrl?: string,
 ): string[] => {
   const errors: string[] = [];
   const nameLength = [...name.trim()].length;
   if (nameLength === 0) errors.push('商品名を入力してください。');
   if (nameLength > 60) errors.push('商品名は60文字以内で入力してください。');
-  const imageError = image || !existingImageUrl ? validateImage(image) : null;
+  const imageError = image ? validateImage(image) : null;
   if (imageError) errors.push(imageError);
   if (category === 'original_cocktail') {
     const recipeLength = [...recipe.trim()].length;

@@ -22,6 +22,11 @@ beforeEach(() => {
 afterEach(() => { cleanup(); localStorage.clear(); });
 
 describe('商品データの更新・削除', () => {
+  it('画像なしの商品を登録できる', async () => {
+    const { result } = renderHook(useData, { wrapper: DataProvider });
+    await act(() => result.current.addProduct({ name: 'お水', category: 'juice', recipe: '', image: null }));
+    expect(result.current.products[0]).toMatchObject({ name: 'お水', imageUrl: '', category: 'juice' });
+  });
   it('複製は別IDで登録し、元の商品と過去の注文を変更しない', async () => {
     const { result } = renderHook(useData, { wrapper: DataProvider });
     await act(() => result.current.duplicateProduct(product.id, { name: '星空 のコピー', category: 'original_cocktail', recipe: '新レシピ', image: null }, product.updatedAt));
