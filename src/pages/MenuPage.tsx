@@ -1,190 +1,423 @@
-import { Check, ChevronLeft, ChevronRight, Grid2X2, List, Minus, Plus, Search, ShoppingBag } from 'lucide-react';
-import { useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-
-import { Modal } from '../components/Modal';
-import { useData } from '../lib/data';
-import { addCartItem, getCartQuantity, setCartItemQuantity } from '../lib/cart';
-import { builtInNormalCocktail } from '../lib/sample-data';
-import { filterMenuProducts } from '../lib/menu-search';
-import { TABLE_NUMBERS } from '../lib/table-numbers';
-import { validateOrderOptions, validateTableNumber } from '../lib/validation';
+import { Check, Minus, Plus, Search, ShoppingBag } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Modal } from "../components/Modal";
+import { CartPanel, OptionSummary } from "../components/CartPanel";
+import { useCart } from "../lib/cart-context";
+import { useData } from "../lib/data";
+import { builtInNormalCocktail } from "../lib/sample-data";
+import { filterMenuProducts } from "../lib/menu-search";
+import { validateOrderOptions, validateTableNumber } from "../lib/validation";
 import {
-  categoryLabels, cocktailColors, colorLabels, productCategories,
-  type CartItem, type CocktailColor, type OrderOptions, type Product, type ProductCategory,
-} from '../types';
-
-const ColorChoice = ({ value, selected, onClick, label }: { value: CocktailColor; selected: boolean; onClick: () => void; label: string }) => (
-  <button type="button" className={`color-choice color-${value} ${selected ? 'selected' : ''}`} onClick={onClick}>
-    <span /><b>{colorLabels[value]}</b><small>{label}</small>{selected && <Check />}
-  </button>
-);
-
+  categoryLabels,
+  cocktailColors,
+  colorLabels,
+  productCategories,
+  type OrderOptions,
+  type Product,
+  type ProductCategory,
+} from "../types";
 export const MenuPage = () => {
-  const { profile, products, placeCart } = useData();
+  const { profile, products, orders, placeCart, ready } = useData();
+  const cart = useCart();
   const navigate = useNavigate();
-  const [category, setCategory] = useState<ProductCategory>('normal_cocktail');
-  const [search, setSearch] = useState('');
-  const [viewMode, setViewMode] = useState<'cards' | 'compact'>('compact');
+  const [category, setCategory] = useState<ProductCategory | "all">("all");
+  const [search, setSearch] = useState("");
+  const [popular, setPopular] = useState(false);
   const [selected, setSelected] = useState<Product | null>(null);
-  const [selectedQuantity, setSelectedQuantity] = useState(1);
   const [options, setOptions] = useState<OrderOptions>({});
-  const [confirming, setConfirming] = useState(false);
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [quantity, setQuantity] = useState(1);
   const [cartOpen, setCartOpen] = useState(false);
-  const [tableNumber, setTableNumber] = useState('');
-  const [cartNotice, setCartNotice] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [receiptNumber, setReceiptNumber] = useState<string | null>(null);
+  const [review, setReview] = useState(false);
+  const [receipt, setReceipt] = useState("");
+  const [notice, setNotice] = useState("");
   const [errors, setErrors] = useState<string[]>([]);
-  const categoryTabsRef = useRef<HTMLDivElement>(null);
-
-  const menuProducts = useMemo(() => {
-    const hasNormalCocktail = products.some((product) => product.category === 'normal_cocktail' && product.isAvailable);
-    return hasNormalCocktail ? products : [builtInNormalCocktail, ...products];
-  }, [products]);
-
-  const visible = useMemo(() => filterMenuProducts(menuProducts, category, search), [category, menuProducts, search]);
-  const cartQuantity = useMemo(() => getCartQuantity(cart), [cart]);
-
-  const openOrder = (product: Product) => {
-    if (!profile) { navigate('/account', { state: { notice: '注文する前に、名前とアイコンを登録してください。' } }); return; }
-    setSelected(product); setSelectedQuantity(1); setOptions({}); setConfirming(product.category !== 'normal_cocktail'); setErrors([]);
+  const [busy, setBusy] = useState(false);
+  const searchInput = useRef<HTMLInputElement>(null);
+  const sending = useRef(false);
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        if (document.querySelector('[role="dialog"]')) return;
+        searchInput.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+  useEffect(() => {
+    if (!notice) return;
+    const timer = window.setTimeout(() => setNotice(""), 1800);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
+  const allProducts = useMemo(
+    () =>
+      products.some((p) => p.category === "normal_cocktail" && p.isAvailable)
+        ? products
+        : [builtInNormalCocktail, ...products],
+    [products],
+  );
+  const visible = useMemo(() => {
+    const items = filterMenuProducts(allProducts, category, search);
+    if (!popular) return items;
+    const counts = new Map<string, number>();
+    orders.forEach((o) =>
+      counts.set(o.productId, (counts.get(o.productId) || 0) + 1),
+    );
+    return [...items].sort(
+      (a, b) => (counts.get(b.id) || 0) - (counts.get(a.id) || 0),
+    );
+  }, [allProducts, category, search, popular, orders]);
+  const add = (product: Product, choices: OrderOptions = {}, amount = 1) => {
+    cart.add(product, choices, amount);
+    setNotice(`${product.name} ×${amount} をカートに追加しました`);
   };
-
-  const goConfirm = () => {
-    if (!selected) return;
-    const nextErrors = validateOrderOptions(selected.category, options);
-    setErrors(nextErrors);
-    if (!nextErrors.length) setConfirming(true);
-  };
-
-  const addSelectedToCart = () => {
-    if (!selected) return;
-    const nextErrors = validateOrderOptions(selected.category, options);
-    if (nextErrors.length) { setErrors(nextErrors); return; }
-    setCart((current) => addCartItem(current, selected, options, selectedQuantity));
-    setCartNotice(`${selected.name} × ${selectedQuantity}をカートに追加しました`);
-    window.setTimeout(() => setCartNotice(null), 2400);
-    setSelected(null); setOptions({}); setConfirming(false); setErrors([]);
-  };
-
-  const addConfiguredToCart = (product: Product, configuredOptions: OrderOptions, quantity = 1) => {
-    if (!profile) { navigate('/account', { state: { notice: 'カートへ追加する前に、名前とアイコンを登録してください。' } }); return; }
-    setCart((current) => addCartItem(current, product, configuredOptions, quantity));
-    setCartNotice(`${product.name} × ${quantity}をカートに追加しました`);
-    window.setTimeout(() => setCartNotice(null), 2400);
+  const choose = (product: Product) => {
+    if (!profile) {
+      navigate("/account", {
+        state: { notice: "注文する前に、名前とアイコンを登録してください。" },
+      });
+      return;
+    }
+    if (product.category !== "normal_cocktail") {
+      add(product);
+      return;
+    }
+    setSelected(product);
+    setOptions({});
+    setQuantity(1);
     setErrors([]);
   };
-
-  const checkout = async () => {
-    const tableError = validateTableNumber(tableNumber);
-    if (!cart.length) { setErrors(['カートに商品を追加してください。']); return; }
-    if (tableError) { setErrors([tableError]); return; }
-    setBusy(true); setErrors([]);
-    try {
-      const nextReceipt = await placeCart(cart, tableNumber);
-      setReceiptNumber(nextReceipt); setCart([]); setTableNumber('');
-    } catch (reason) {
-      setErrors([reason instanceof Error ? reason.message : '注文を送信できませんでした。']);
-    } finally { setBusy(false); }
+  const configure = () => {
+    if (!selected) return;
+    const next = validateOrderOptions(selected.category, options);
+    setErrors(next);
+    if (next.length) return;
+    add(selected, options, quantity);
+    setSelected(null);
   };
-
-  const closeCart = () => { setCartOpen(false); setReceiptNumber(null); setErrors([]); };
-  const slideCategories = (direction: -1 | 1) => categoryTabsRef.current?.scrollBy({ left: direction * categoryTabsRef.current.clientWidth * 0.72, behavior: 'smooth' });
-
+  const startReview = () => {
+    setErrors([]);
+    setCartOpen(false);
+    setReview(true);
+  };
+  const submit = async () => {
+    if (sending.current) return;
+    const error = validateTableNumber(cart.table);
+    if (error || !cart.quantity) {
+      setErrors([error || "商品を追加してください。"]);
+      return;
+    }
+    sending.current = true;
+    setBusy(true);
+    setErrors([]);
+    try {
+      const number = await placeCart(cart.items, cart.table);
+      setReceipt(number);
+      cart.clear();
+      setReview(false);
+    } catch (reason) {
+      setErrors([
+        reason instanceof Error ? reason.message : "送信に失敗しました。",
+      ]);
+    } finally {
+      sending.current = false;
+      setBusy(false);
+    }
+  };
   return (
-    <div className="page menu-page">
-      <section className="menu-section">
-        <div className="section-title-row"><div><span className="eyebrow">ORDER MENU</span><h2>MENU</h2><p>商品を選択し、カートからまとめて注文。</p></div><div className="menu-tools"><label className="search-box"><Search /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="全カテゴリーから商品を検索" /></label><div className="menu-view-toggle" aria-label="商品表示タイプ"><button type="button" className={viewMode === 'cards' ? 'active' : ''} aria-pressed={viewMode === 'cards'} onClick={() => setViewMode('cards')}><Grid2X2 />写真あり</button><button type="button" className={viewMode === 'compact' ? 'active' : ''} aria-pressed={viewMode === 'compact'} onClick={() => setViewMode('compact')}><List />商品名のみ</button><small>すべての商品に適用</small></div></div></div>
-        <div className="category-tabs-shell"><button className="category-slide-button previous" type="button" onClick={() => slideCategories(-1)} aria-label="前のカテゴリーを見る"><ChevronLeft /></button><div className="tab-list" ref={categoryTabsRef} role="tablist" aria-label="商品カテゴリー">
-          {productCategories.map((value) => <button role="tab" aria-selected={category === value} className={category === value ? 'active' : ''} key={value} onClick={(event) => { setCategory(value); event.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); }}>{categoryLabels[value]}<span>{menuProducts.filter((item) => item.category === value && item.isAvailable).length}</span></button>)}
-        </div><button className="category-slide-button next" type="button" onClick={() => slideCategories(1)} aria-label="次のカテゴリーを見る"><ChevronRight /></button></div>
-
-        {search.trim() && <p className="search-result-count">全カテゴリーから <b>{visible.length}件</b> 見つかりました</p>}
-        {visible.length ? <div className={`product-grid ${viewMode === 'compact' ? 'product-grid-compact' : ''}`}>{visible.map((product) => viewMode === 'compact' ? (
-          <article className="compact-product-card" key={product.id}><h3>{product.name}</h3><button type="button" onClick={() => openOrder(product)}><ShoppingBag />カートへ<ChevronRight /></button></article>
-        ) : product.category === 'normal_cocktail' ? (
-          <NormalCocktailBuilder key={product.id} product={product} onAdd={addConfiguredToCart} />
-        ) : (
-          <article className="product-card" key={product.id}>
-            <div className="product-image"><img src={product.imageUrl} alt={product.name} /><span>{categoryLabels[product.category]}</span></div>
-            <div className="product-body"><div><h3>{product.name}</h3><p>by {product.creatorName}</p></div><button type="button" onClick={() => openOrder(product)}><ShoppingBag />カートへ追加<ChevronRight /></button></div>
-          </article>
-        ))}</div> : <div className="empty-state"><CoffeeIcon /><h3>{search.trim() ? '検索に一致する商品がありません' : 'このカテゴリーの商品はまだありません'}</h3><p>{search.trim() ? '商品名やカテゴリー名を変えて検索してください。' : '「商品追加」から最初のメニューを登録できます。'}</p>{!search.trim() && <button className="secondary-button" onClick={() => navigate('/add')}>商品を追加する</button>}</div>}
-      </section>
-
-      <button className="cart-fab" type="button" onClick={() => { setCartOpen(true); setErrors([]); }} aria-label={`カートを開く、${cartQuantity}点`}><ShoppingBag /><span>カート</span><b>{cartQuantity}</b></button>
-      {cartNotice && <div className="cart-toast" role="status"><Check /><span><b>カートに追加しました</b>{cartNotice}</span></div>}
-
-      {selected && <Modal title={confirming ? 'カートへ追加する内容' : 'カクテルをカスタマイズ'} onClose={() => setSelected(null)} wide>
-        <div className="order-flow">
-          <div className="order-product-summary"><img src={selected.imageUrl} alt="" /><div><span>{categoryLabels[selected.category]}</span><h3>{selected.name}</h3><p>ご注文者：{profile?.displayName}</p></div></div>
-          {!confirming && selected.category === 'normal_cocktail' && <div className="customize-stack">
-            <fieldset className="field-group"><legend><b>1</b>1色目を選択</legend><div className="color-grid">{cocktailColors.map((color) => <ColorChoice key={color} value={color} selected={options.color1 === color} onClick={() => setOptions((current) => ({ ...current, color1: color }))} label="1色目" />)}</div></fieldset>
-            <fieldset className="field-group"><legend><b>2</b>2色目を選択 <small>同じ色も選べます</small></legend><div className="color-grid">{cocktailColors.map((color) => <ColorChoice key={color} value={color} selected={options.color2 === color} onClick={() => setOptions((current) => ({ ...current, color2: color }))} label="2色目" />)}</div></fieldset>
-            <BinaryField legend="炭酸" value={options.carbonated} onChange={(value) => setOptions((current) => ({ ...current, carbonated: value }))} />
-            <BinaryField legend="媚薬" value={options.aphrodisiac} onChange={(value) => setOptions((current) => ({ ...current, aphrodisiac: value }))} />
-          </div>}
-          {confirming && <div className="confirmation-card"><span className="eyebrow">CART ITEM</span><h3>この内容をカートへ入れますか？</h3>
-            {selected.category === 'normal_cocktail' && <dl><div><dt>色</dt><dd><span className={`mini-color color-${options.color1}`} />{colorLabels[options.color1!]} ＋ <span className={`mini-color color-${options.color2}`} />{colorLabels[options.color2!]}</dd></div><div><dt>炭酸</dt><dd>{options.carbonated ? 'あり' : 'なし'}</dd></div><div><dt>媚薬</dt><dd>{options.aphrodisiac ? 'あり' : 'なし'}</dd></div></dl>}
-            {selected.category !== 'normal_cocktail' && <p>{selected.category === 'original_cocktail' ? 'オリジナルカクテルのレシピはスタッフへ引き継がれます。' : '追加オプションはありません。'}</p>}
-            <QuantitySelector value={selectedQuantity} onChange={setSelectedQuantity} label="注文数" />
-          </div>}
-          {errors.length > 0 && <div className="error-list">{errors.map((error) => <p key={error}>{error}</p>)}</div>}
-          <div className="modal-actions">{confirming && selected.category === 'normal_cocktail' && <button className="secondary-button" type="button" onClick={() => setConfirming(false)}>選び直す</button>}<button className="primary-button" type="button" onClick={() => confirming ? addSelectedToCart() : goConfirm()}>{confirming ? 'カートに入れる' : '内容を確認する'}</button></div>
+    <div className="page order-page">
+      <div className="order-workspace">
+        <section className="catalog" aria-label="商品一覧">
+          <header className="page-heading">
+            <div>
+              <span className="eyebrow">ORDER / MENU</span>
+              <h1>注文</h1>
+              <p>商品を選んで、テーブルへ。</p>
+            </div>
+            <label className="search-box">
+              <Search />
+              <input
+                ref={searchInput}
+                aria-label="商品を検索"
+                placeholder="商品を検索"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              <kbd>⌘ / Ctrl K</kbd>
+            </label>
+          </header>
+          <div className="catalog-toolbar">
+            <div className="category-tabs" aria-label="商品カテゴリー">
+              {(["all", ...productCategories] as const).map((value) => (
+                <button
+                  key={value}
+                  aria-pressed={category === value}
+                  className={category === value ? "active" : ""}
+                  onClick={() => setCategory(value)}
+                >
+                  {value === "all"
+                    ? "すべて"
+                    : value === "normal_cocktail"
+                      ? "ノーマル"
+                      : value === "original_cocktail"
+                        ? "オリジナル"
+                        : categoryLabels[value]}
+                </button>
+              ))}
+            </div>
+            <label className="sort-label">
+              並び順
+              <select
+                value={popular ? "popular" : "default"}
+                onChange={(e) => setPopular(e.target.value === "popular")}
+              >
+                <option value="default">登録順</option>
+                <option value="popular">よく注文される順</option>
+              </select>
+            </label>
+          </div>
+          <div className="catalog-caption">
+            <span>{search ? "全カテゴリーの検索結果" : "メニュー"}</span>
+            <span>{visible.length}商品</span>
+          </div>
+          {!ready ? (
+            <p role="status">商品を読み込んでいます…</p>
+          ) : visible.length ? (
+            <div className="pos-product-grid">
+              {visible.map((product) => (
+                <button
+                  className="pos-product-card"
+                  key={product.id}
+                  onClick={() => choose(product)}
+                  aria-label={`${product.name}${product.category === "normal_cocktail" ? "をカスタマイズ" : "をカートに追加"}`}
+                >
+                  <div className="pos-product-image">
+                    <img
+                      src={product.imageUrl}
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                    />
+                    <span className="add-cue">
+                      <Plus />
+                    </span>
+                  </div>
+                  <div className="pos-product-copy">
+                    <small>{categoryLabels[product.category]}</small>
+                    <strong>{product.name}</strong>
+                    <span>
+                      {product.category === "normal_cocktail"
+                        ? "色・オプションを選択"
+                        : "タップして追加"}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="empty-state">
+              <Search />
+              <h2>商品が見つかりません</h2>
+              <p>検索条件やカテゴリーを変更してください。</p>
+              <button
+                className="secondary-button"
+                onClick={() => {
+                  setSearch("");
+                  setCategory("all");
+                }}
+              >
+                検索をクリア
+              </button>
+            </div>
+          )}
+        </section>
+        <aside className="desktop-cart">
+          <CartPanel onReview={startReview} />
+        </aside>
+      </div>
+      <button
+        className="mobile-cart-button"
+        onClick={() => {
+          setCartOpen(true);
+          setErrors([]);
+        }}
+      >
+        <ShoppingBag />
+        <span>注文内容を見る</span>
+        <b>{cart.quantity}点</b>
+      </button>
+      {notice && (
+        <div className="toast" role="status">
+          <Check />
+          {notice}
         </div>
-      </Modal>}
-
-      {cartOpen && <Modal title={receiptNumber ? '注文完了' : `カート（${cartQuantity}点）`} onClose={closeCart} wide>
-        {receiptNumber ? <div className="success-state"><div className="success-icon"><Check /></div><span className="eyebrow">ORDER NUMBER</span><h3>受付番号 #{receiptNumber}</h3><p>BarMisakiへ注文を送信しました。<br />テーブルまでお届けします。</p><button className="primary-button" onClick={closeCart}>メニューへ戻る</button></div> : <div className="cart-checkout">
-          {cart.length ? <div className="cart-list">{cart.map((item) => <article className="cart-item" key={item.id}><img src={item.product.imageUrl} alt="" /><div><span>{categoryLabels[item.product.category]}</span><h3>{item.product.name}</h3>{item.product.category === 'normal_cocktail' && <p><i className={`mini-color color-${item.options.color1}`} />{colorLabels[item.options.color1!]} ＋ <i className={`mini-color color-${item.options.color2}`} />{colorLabels[item.options.color2!]} ／ 炭酸 {item.options.carbonated ? 'あり' : 'なし'} ／ 媚薬 {item.options.aphrodisiac ? 'あり' : 'なし'}</p>}</div><div className="quantity-stepper" aria-label={`${item.product.name}の個数`}><button type="button" onClick={() => setCart((current) => setCartItemQuantity(current, item.id, item.quantity - 1))} aria-label="1個減らす"><Minus /></button><output aria-live="polite">{item.quantity}</output><button type="button" onClick={() => setCart((current) => setCartItemQuantity(current, item.id, item.quantity + 1))} aria-label="1個増やす"><Plus /></button></div></article>)}</div> : <div className="cart-empty"><ShoppingBag /><h3>カートは空です</h3><p>メニューから商品を追加してください。</p></div>}
-          <fieldset className="table-number-field"><legend>テーブル番号 <b>必須</b></legend><div className="table-number-grid">{TABLE_NUMBERS.map((number) => <button type="button" key={number} className={tableNumber === number ? 'selected' : ''} aria-pressed={tableNumber === number} onClick={() => setTableNumber(number)}>{number}</button>)}</div><em>お届け先のテーブル番号を1〜18から選択してください。</em></fieldset>
-          {errors.length > 0 && <div className="error-list">{errors.map((error) => <p key={error}>{error}</p>)}</div>}
-          <button className="primary-button cart-submit" type="button" disabled={busy || !cartQuantity} onClick={() => void checkout()}>{busy ? '注文を送信中…' : `${cartQuantity}点を注文する`}</button>
-        </div>}
-      </Modal>}
+      )}
+      {cartOpen && (
+        <Modal title="注文内容" onClose={() => setCartOpen(false)} drawer>
+          <CartPanel onReview={startReview} />
+        </Modal>
+      )}
+      {selected && (
+        <Modal title={selected.name} onClose={() => setSelected(null)} wide>
+          <div className="customize-stack">
+            <p className="muted">
+              2色とオプションを選択してください。同じ色も選べます。
+            </p>
+            {(["color1", "color2"] as const).map((key, index) => (
+              <fieldset className="field-group" key={key}>
+                <legend>{index + 1}色目</legend>
+                <div className="color-grid">
+                  {cocktailColors.map((color) => (
+                    <button
+                      aria-pressed={options[key] === color}
+                      className={`color-choice ${options[key] === color ? "selected" : ""}`}
+                      key={color}
+                      onClick={() =>
+                        setOptions((current) => ({ ...current, [key]: color }))
+                      }
+                    >
+                      <i className={`mini-color color-${color}`} />
+                      <span>{colorLabels[color]}</span>
+                      {options[key] === color && <Check />}
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
+            ))}
+            <div className="binary-grid">
+              {(["carbonated", "aphrodisiac"] as const).map((key) => (
+                <fieldset className="field-group" key={key}>
+                  <legend>{key === "carbonated" ? "炭酸" : "媚薬"}</legend>
+                  <div className="segmented">
+                    {[true, false].map((value) => (
+                      <button
+                        key={String(value)}
+                        aria-pressed={options[key] === value}
+                        className={options[key] === value ? "selected" : ""}
+                        onClick={() =>
+                          setOptions((current) => ({
+                            ...current,
+                            [key]: value,
+                          }))
+                        }
+                      >
+                        {value ? "あり" : "なし"}
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+              ))}
+            </div>
+            <div className="cart-total">
+              <span>注文数</span>
+              <div className="quantity-stepper">
+                <button
+                  aria-label="注文数を1個減らす"
+                  disabled={quantity <= 1}
+                  onClick={() => setQuantity(quantity - 1)}
+                >
+                  <Minus />
+                </button>
+                <output>{quantity}</output>
+                <button
+                  aria-label="注文数を1個増やす"
+                  disabled={quantity >= 99}
+                  onClick={() => setQuantity(quantity + 1)}
+                >
+                  <Plus />
+                </button>
+              </div>
+            </div>
+            {errors.length > 0 && (
+              <div className="error-list" role="alert">
+                {errors.map((error) => (
+                  <p key={error}>{error}</p>
+                ))}
+              </div>
+            )}
+            <button className="primary-button full-width" onClick={configure}>
+              <ShoppingBag />
+              カートに追加
+            </button>
+          </div>
+        </Modal>
+      )}
+      {review && (
+        <Modal
+          title="注文内容を確認"
+          onClose={() => {
+            if (!busy) setReview(false);
+          }}
+        >
+          <div className="review-table">
+            テーブル <b>{cart.table || "未選択"}</b>
+          </div>
+          <div className="review-items">
+            {cart.items.map((item) => (
+              <div key={item.id}>
+                <div>
+                  <strong>{item.product.name}</strong>
+                  <OptionSummary options={item.options} />
+                </div>
+                <b>×{item.quantity}</b>
+              </div>
+            ))}
+          </div>
+          <div className="cart-total">
+            <span>合計</span>
+            <b>{cart.quantity}点</b>
+          </div>
+          {!cart.table && (
+            <p className="error-list">
+              カートに戻って、テーブル番号を選択してください。
+            </p>
+          )}
+          {errors.length > 0 && (
+            <div className="error-list" role="alert">
+              {errors.map((error) => (
+                <p key={error}>{error}</p>
+              ))}
+            </div>
+          )}
+          <div className="form-actions">
+            <button
+              className="secondary-button"
+              disabled={busy}
+              onClick={() => {
+                setReview(false);
+                setCartOpen(true);
+              }}
+            >
+              戻る
+            </button>
+            <button
+              className="primary-button"
+              disabled={busy || !cart.quantity || !cart.table}
+              onClick={() => void submit()}
+            >
+              {busy ? "送信中…" : "注文を送信"}
+            </button>
+          </div>
+        </Modal>
+      )}
+      {receipt && (
+        <Modal title="注文を受け付けました" onClose={() => setReceipt("")}>
+          <div className="success-state">
+            <Check />
+            <p>受付番号</p>
+            <h2>#{receipt}</h2>
+            <p>テーブルまでお届けします。</p>
+            <button className="primary-button" onClick={() => setReceipt("")}>
+              注文を続ける
+            </button>
+            <Link to="/orders" onClick={() => setReceipt("")}>
+              注文状況を見る
+            </Link>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };
-
-const BinaryField = ({ legend, value, onChange }: { legend: string; value: boolean | undefined; onChange: (value: boolean) => void }) => (
-  <fieldset className="field-group binary-field"><legend>{legend}</legend><div className="segmented"><button type="button" className={value === true ? 'selected' : ''} onClick={() => onChange(true)}>あり</button><button type="button" className={value === false ? 'selected' : ''} onClick={() => onChange(false)}>なし</button></div></fieldset>
-);
-
-const QuantitySelector = ({ value, onChange, label }: { value: number; onChange: (value: number) => void; label: string }) => (
-  <div className="order-quantity-row">
-    <span>{label}</span>
-    <div className="quantity-stepper" aria-label={label}>
-      <button type="button" disabled={value <= 1} onClick={() => onChange(Math.max(1, value - 1))} aria-label={`${label}を1個減らす`}><Minus /></button>
-      <output aria-live="polite">{value}</output>
-      <button type="button" disabled={value >= 99} onClick={() => onChange(Math.min(99, value + 1))} aria-label={`${label}を1個増やす`}><Plus /></button>
-    </div>
-  </div>
-);
-
-const NormalCocktailBuilder = ({ product, onAdd }: { product: Product & { category: 'normal_cocktail' }; onAdd: (product: Product, options: OrderOptions, quantity: number) => void }) => {
-  const [builderOptions, setBuilderOptions] = useState<OrderOptions>({});
-  const [quantity, setQuantity] = useState(1);
-  const [builderErrors, setBuilderErrors] = useState<string[]>([]);
-
-  const add = () => {
-    const nextErrors = validateOrderOptions(product.category, builderOptions);
-    setBuilderErrors(nextErrors);
-    if (!nextErrors.length) onAdd(product, builderOptions, quantity);
-  };
-
-  return <article className="normal-builder">
-    <div className="normal-builder-visual"><img src={product.imageUrl} alt={product.name} /><span>BUILD YOUR COCKTAIL</span><div><small>ノーマルカクテル</small><h3>{product.name}</h3><p>同じ色の組み合わせも選べます。</p></div></div>
-    <div className="normal-builder-controls">
-      <div className="builder-heading"><span className="eyebrow">CUSTOM ORDER</span><h3>カクテルをつくる</h3><p>4つの項目を選択してカートへ追加してください。</p></div>
-      <fieldset className="field-group builder-color-field"><legend><b>01</b>1色目</legend><div className="color-grid">{cocktailColors.map((color) => <ColorChoice key={color} value={color} selected={builderOptions.color1 === color} onClick={() => setBuilderOptions((current) => ({ ...current, color1: color }))} label="1色目" />)}</div></fieldset>
-      <fieldset className="field-group builder-color-field"><legend><b>02</b>2色目 <small>同色OK</small></legend><div className="color-grid">{cocktailColors.map((color) => <ColorChoice key={color} value={color} selected={builderOptions.color2 === color} onClick={() => setBuilderOptions((current) => ({ ...current, color2: color }))} label="2色目" />)}</div></fieldset>
-      <div className="builder-binary-grid"><BinaryField legend="03 炭酸" value={builderOptions.carbonated} onChange={(value) => setBuilderOptions((current) => ({ ...current, carbonated: value }))} /><BinaryField legend="04 媚薬" value={builderOptions.aphrodisiac} onChange={(value) => setBuilderOptions((current) => ({ ...current, aphrodisiac: value }))} /></div>
-      {builderErrors.length > 0 && <div className="error-list">{builderErrors.map((error) => <p key={error}>{error}</p>)}</div>}
-      <div className="builder-order-actions"><QuantitySelector value={quantity} onChange={setQuantity} label="注文数" /><button className="primary-button builder-add-button" type="button" onClick={add}><ShoppingBag />選択した内容をカートへ追加</button></div>
-    </div>
-  </article>;
-};
-
-const CoffeeIcon = () => <div className="empty-icon"><ShoppingBag /></div>;

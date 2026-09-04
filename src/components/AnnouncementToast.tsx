@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { useData } from '../lib/data';
 import { isInCurrentServiceDay } from '../lib/service-day';
-import { playAnnouncementSound } from '../lib/notification-sounds';
+import { playAnnouncementSound, playEmergencySound } from '../lib/notification-sounds';
 import { announcementKindLabels, type Announcement } from '../types';
 
 export const AnnouncementToast = () => {
@@ -28,7 +28,8 @@ export const AnnouncementToast = () => {
     if (!next) return;
     window.clearTimeout(timer.current);
     setVisible(next);
-    playAnnouncementSound();
+    if (next.kind === 'urgent') playEmergencySound();
+    else playAnnouncementSound();
     const remaining = Math.max(0, 20_000 - (Date.now() - new Date(next.createdAt).getTime()));
     timer.current = window.setTimeout(() => setVisible(null), remaining);
   }, [announcements]);

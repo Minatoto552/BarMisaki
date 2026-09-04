@@ -15,10 +15,20 @@ export const EmergencySystem = () => {
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [updating, setUpdating] = useState(false);
+  const [updateError, setUpdateError] = useState('');
   const initialized = useRef(false);
   const heard = useRef(new Set<string>());
   const active = emergencies.filter((item) => item.status !== 'resolved');
   const latest = active[0];
+
+  const advance = async () => {
+    if (!latest || updating) return;
+    setUpdating(true); setUpdateError('');
+    try { await updateEmergency(latest.id, latest.status === 'active' ? 'acknowledged' : 'resolved'); }
+    catch { setUpdateError('更新できませんでした。もう一度お試しください。'); }
+    finally { setUpdating(false); }
+  };
 
   useEffect(() => {
     if (!initialized.current) {
@@ -51,12 +61,13 @@ export const EmergencySystem = () => {
           <div className="emergency-banner-copy">
             <strong>{emergencyKindLabels[latest.kind]}</strong>
             <span>{latest.creatorName}{latest.message ? ` — ${latest.message}` : ''}</span>
+            {updateError && <span role="alert">{updateError}</span>}
           </div>
           {isStaff && latest.status === 'active' && (
-            <button type="button" onClick={() => void updateEmergency(latest.id, 'acknowledged')}><Check size={18} />確認</button>
+            <button type="button" disabled={updating} onClick={() => void advance()}><Check size={18} />{updating ? '更新中…' : '確認'}</button>
           )}
           {isStaff && latest.status === 'acknowledged' && (
-            <button type="button" onClick={() => void updateEmergency(latest.id, 'resolved')}><Check size={18} />解決</button>
+            <button type="button" disabled={updating} onClick={() => void advance()}><Check size={18} />{updating ? '更新中…' : '解決'}</button>
           )}
         </aside>
       )}

@@ -1,88 +1,374 @@
-import { AlertTriangle, BellRing, CheckCircle2, ChefHat, Clock3, Eye, Radio, UserRound } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
-
-import { Modal } from '../components/Modal';
-import { RecipeViewer } from '../components/RecipeViewer';
-import { useData } from '../lib/data';
-import { groupOrdersByCart, matchesOrderGroupFilter, type OrderGroup } from '../lib/order-groups';
-import { getCurrentServiceDayStart } from '../lib/service-day';
 import {
-  categoryLabels, colorLabels, emergencyKindLabels, orderStatusLabels, orderStatuses,
-  type Emergency, type Order, type OrderStatus,
-} from '../types';
-
-type StatusFilter = 'all' | OrderStatus;
-
-const formatTime = (value: string) => new Intl.DateTimeFormat('ja-JP', { hour: '2-digit', minute: '2-digit', month: 'numeric', day: 'numeric' }).format(new Date(value));
-
+  AlertTriangle,
+  BellRing,
+  CheckCircle2,
+  ChefHat,
+  Clock3,
+  Eye,
+  UserRound,
+} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Modal } from "../components/Modal";
+import { RecipeViewer } from "../components/RecipeViewer";
+import { OptionSummary } from "../components/CartPanel";
+import { useData } from "../lib/data";
+import {
+  groupOrdersByCart,
+  matchesOrderGroupFilter,
+  type OrderGroup,
+} from "../lib/order-groups";
+import { summarizeOrderItems, getOrderAge } from "../lib/order-presentation";
+import { getCurrentServiceDayStart } from "../lib/service-day";
+import {
+  emergencyKindLabels,
+  orderStatusLabels,
+  orderStatuses,
+  type Emergency,
+  type Order,
+  type OrderStatus,
+} from "../types";
+type StatusFilter = "all" | OrderStatus;
+const time = (value: string) =>
+  new Date(value).toLocaleTimeString("ja-JP", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 export const OrdersPage = () => {
-  const { uid, isStaff, orders, emergencies, updateOrder, updateEmergency } = useData();
-  const [filter, setFilter] = useState<StatusFilter>('all');
-  const [recipeOrder, setRecipeOrder] = useState<Order | null>(null);
-  const [emergencyDetail, setEmergencyDetail] = useState<Emergency | null>(null);
-  const [serviceDayStart, setServiceDayStart] = useState(() => getCurrentServiceDayStart());
+  const {
+    uid,
+    isStaff,
+    orders,
+    emergencies,
+    updateOrder,
+    updateEmergency,
+    ready,
+    runtimeMode,
+    error: connectionError,
+  } = useData();
+  const [filter, setFilter] = useState<StatusFilter>("all");
+  const [recipe, setRecipe] = useState<Order | null>(null);
+  const [detail, setDetail] = useState<Emergency | null>(null);
+  const [now, setNow] = useState(Date.now);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState("");
   useEffect(() => {
-    const timer = window.setInterval(() => setServiceDayStart(getCurrentServiceDayStart()), 30_000);
+    const timer = window.setInterval(() => setNow(Date.now()), 10_000);
     return () => window.clearInterval(timer);
   }, []);
-  const baseOrders = useMemo(() => (isStaff ? orders : orders.filter((order) => order.orderedBy === uid))
-    .filter((order) => new Date(order.createdAt).getTime() >= serviceDayStart), [isStaff, orders, serviceDayStart, uid]);
-  const orderGroups = useMemo(() => groupOrdersByCart(baseOrders), [baseOrders]);
-  const visible = useMemo(() => orderGroups.filter((group) => matchesOrderGroupFilter(group.status, filter)), [filter, orderGroups]);
-  const activeEmergency = emergencies.filter((item) => item.status !== 'resolved');
-  const counts: Record<StatusFilter, number> = {
-    all: orderGroups.filter((item) => item.status !== 'completed').length,
-    pending: orderGroups.filter((item) => item.status === 'pending').length,
-    preparing: orderGroups.filter((item) => item.status === 'preparing').length,
-    completed: orderGroups.filter((item) => item.status === 'completed').length,
+  const dayStart = getCurrentServiceDayStart(new Date(now));
+  const groups = useMemo(
+    () =>
+      groupOrdersByCart(
+        orders.filter(
+          (o) =>
+            (isStaff || o.orderedBy === uid) &&
+            new Date(o.createdAt).getTime() >= dayStart,
+        ),
+      ),
+    [orders, isStaff, uid, dayStart],
+  );
+  const visible = useMemo(
+    () =>
+      groups
+        .filter((g) => matchesOrderGroupFilter(g.status, filter))
+        .sort((a, b) =>
+          filter === "completed"
+            ? b.createdAt.localeCompare(a.createdAt)
+            : a.createdAt.localeCompare(b.createdAt),
+        ),
+    [groups, filter],
+  );
+  const counts = {
+    all: groups.filter((g) => g.status !== "completed").length,
+    pending: groups.filter((g) => g.status === "pending").length,
+    preparing: groups.filter((g) => g.status === "preparing").length,
+    completed: groups.filter((g) => g.status === "completed").length,
   };
-
-  const updateGroupStatus = async (group: OrderGroup, status: OrderStatus) => {
-    await Promise.all(group.orders.filter((order) => order.status !== status).map((order) => updateOrder(order.id, status)));
+  const active = emergencies.filter((e) => e.status !== "resolved");
+  const change = async (group: OrderGroup, status: OrderStatus) => {
+    if (busy) return;
+    setBusy(group.id);
+    setError("");
+    try {
+      await Promise.all(
+        group.orders
+          .filter((o) => o.status !== status)
+          .map((o) => updateOrder(o.id, status)),
+      );
+    } catch {
+      setError(
+        "一部の状態を更新できませんでした。接続を確認し、もう一度お試しください。",
+      );
+    } finally {
+      setBusy(null);
+    }
   };
-
+  const changeEmergency = async (item: Emergency) => {
+    setError("");
+    try {
+      await updateEmergency(
+        item.id,
+        item.status === "active" ? "acknowledged" : "resolved",
+      );
+      setDetail(null);
+    } catch {
+      setError("緊急通知を更新できませんでした。もう一度お試しください。");
+    }
+  };
   return (
     <div className="page orders-page">
-      <div className="page-heading split-heading"><div><span className="eyebrow">LIVE KITCHEN</span><h1>{isStaff ? '注文管理' : '注文状況'}</h1><p>{isStaff ? '新しい注文と状態変更を、全端末へリアルタイムで同期します。' : 'あなたの注文が現在どの状態か確認できます。'}</p></div><div className="live-indicator"><Radio /><span><b>LIVE</b>常時更新中</span></div></div>
-
-      {isStaff && activeEmergency.length > 0 && <section className="emergency-desk">
-        <div className="desk-title"><div className="desk-icon"><BellRing /></div><div><span className="eyebrow light">EMERGENCY DESK</span><h2>緊急通知</h2></div><b>{activeEmergency.length}件 対応中</b></div>
-        <div className="emergency-list">{activeEmergency.map((item) => <article key={item.id} className={`emergency-ticket status-${item.status}`}><img src={item.creatorIconUrl} alt="" /><div><strong>{emergencyKindLabels[item.kind]}</strong><span>{item.creatorName}・{formatTime(item.createdAt)}</span><p>{item.message || '補足はありません'}</p></div><div className="ticket-actions"><button type="button" className="ghost-button" onClick={() => setEmergencyDetail(item)}><Eye />詳細</button>{item.status === 'active' ? <button type="button" onClick={() => void updateEmergency(item.id, 'acknowledged')}>対応を開始</button> : <button type="button" onClick={() => void updateEmergency(item.id, 'resolved')}><CheckCircle2 />解決</button>}</div></article>)}</div>
-      </section>}
-
+      <header className="page-heading">
+        <div>
+          <span className="eyebrow">LIVE OPERATIONS</span>
+          <h1>{isStaff ? "注文管理" : "注文状況"}</h1>
+          <p>古い注文から優先して表示しています。</p>
+        </div>
+        <span
+          className={`connection-status ${connectionError ? "offline" : ""}`}
+        >
+          <i />
+          {connectionError
+            ? "接続エラー"
+            : !ready
+              ? "接続中"
+              : runtimeMode === "sample"
+                ? "DEMO"
+                : "LIVE"}
+        </span>
+      </header>
+      <div className="order-summary">
+        {orderStatuses.map((status) => (
+          <button
+            key={status}
+            className={`summary-card ${status}`}
+            onClick={() => setFilter(status)}
+          >
+            <span>
+              <i />
+              {orderStatusLabels[status]}
+            </span>
+            <b>{counts[status]}</b>
+            <small>注文</small>
+          </button>
+        ))}
+      </div>
+      {error && (
+        <p className="error-list" role="alert">
+          {error}
+        </p>
+      )}
+      {isStaff && active.length > 0 && (
+        <section className="emergency-desk">
+          <header>
+            <h2>
+              <BellRing />
+              緊急通知
+            </h2>
+            <span>{active.length}件</span>
+          </header>
+          <div className="emergency-list">
+            {active.map((item) => (
+              <article className="emergency-ticket" key={item.id}>
+                <div>
+                  <strong>{emergencyKindLabels[item.kind]}</strong>
+                  <p>
+                    {item.creatorName} · {time(item.createdAt)}
+                  </p>
+                  <p>{item.message}</p>
+                </div>
+                <div className="ticket-actions">
+                  <button
+                    className="secondary-button"
+                    onClick={() => setDetail(item)}
+                  >
+                    <Eye />
+                    詳細
+                  </button>
+                  <button
+                    className="danger-button"
+                    onClick={() => void changeEmergency(item)}
+                  >
+                    {item.status === "active" ? "対応を開始" : "解決済みにする"}
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
       <section className="orders-board">
-        <div className="orders-toolbar"><div className="status-tabs">{(['all', ...orderStatuses] as StatusFilter[]).map((status) => <button type="button" key={status} className={filter === status ? 'active' : ''} onClick={() => setFilter(status)}>{status === 'all' ? 'すべて' : orderStatusLabels[status]}<span>{counts[status]}</span></button>)}</div><p>毎日 午前5時に履歴をリセット</p></div>
-        {visible.length ? <div className="order-list">{visible.map((group) => <OrderGroupTicket key={group.id} group={group} isStaff={isStaff} onStatus={(status) => void updateGroupStatus(group, status)} onRecipe={setRecipeOrder} />)}</div> : <div className="empty-state"><div className="empty-icon"><ChefHat /></div><h3>該当する注文はありません</h3><p>新しい注文が入ると、ここへ自動で表示されます。</p></div>}
+        <div className="orders-toolbar">
+          <div className="category-tabs" aria-label="注文状態">
+            {(["all", ...orderStatuses] as StatusFilter[]).map((status) => (
+              <button
+                key={status}
+                className={filter === status ? "active" : ""}
+                aria-pressed={filter === status}
+                onClick={() => setFilter(status)}
+              >
+                {status === "all" ? "すべて" : orderStatusLabels[status]}
+                <span className="count-badge">{counts[status]}</span>
+              </button>
+            ))}
+          </div>
+          <small>履歴は毎日5:00に表示をリセット</small>
+        </div>
+        {visible.length ? (
+          <div className="order-list">
+            {visible.map((group) => (
+              <OrderCard
+                key={group.id}
+                group={group}
+                now={now}
+                isStaff={isStaff}
+                busy={!!busy}
+                onStatus={(status) => void change(group, status)}
+                onRecipe={setRecipe}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="empty-state">
+            <ChefHat />
+            <h2>該当する注文はありません</h2>
+            <p>新しい注文が入ると自動で表示されます。</p>
+          </div>
+        )}
       </section>
-
-      {recipeOrder?.category === 'original_cocktail' && <RecipeViewer order={recipeOrder} onClose={() => setRecipeOrder(null)} />}
-      {emergencyDetail && <Modal title="緊急通知の詳細" onClose={() => setEmergencyDetail(null)}><div className="emergency-detail"><div className="alert-note"><AlertTriangle /><p><strong>{emergencyKindLabels[emergencyDetail.kind]}</strong><br />{emergencyDetail.creatorName}・{formatTime(emergencyDetail.createdAt)}</p></div><dl><div><dt>補足</dt><dd>{emergencyDetail.message || 'なし'}</dd></div><div><dt>状態</dt><dd>{emergencyDetail.status === 'active' ? '未確認' : '対応中'}</dd></div></dl><button className="primary-button" onClick={() => { void updateEmergency(emergencyDetail.id, emergencyDetail.status === 'active' ? 'acknowledged' : 'resolved'); setEmergencyDetail(null); }}>{emergencyDetail.status === 'active' ? '対応を開始する' : '解決済みにする'}</button></div></Modal>}
+      {recipe?.category === "original_cocktail" && (
+        <RecipeViewer order={recipe} onClose={() => setRecipe(null)} />
+      )}
+      {detail && (
+        <Modal title="緊急通知の詳細" onClose={() => setDetail(null)}>
+          <div className="alert-note">
+            <AlertTriangle />
+            <div>
+              <strong>{emergencyKindLabels[detail.kind]}</strong>
+              <p>
+                {detail.creatorName} · {time(detail.createdAt)}
+              </p>
+            </div>
+          </div>
+          <p>{detail.message || "補足はありません"}</p>
+          <button
+            className="danger-button full-width"
+            onClick={() => void changeEmergency(detail)}
+          >
+            {detail.status === "active" ? "対応を開始" : "解決済みにする"}
+          </button>
+        </Modal>
+      )}
     </div>
   );
 };
-
-const OrderGroupTicket = ({ group, isStaff, onStatus, onRecipe }: { group: OrderGroup; isStaff: boolean; onStatus: (status: OrderStatus) => void; onRecipe: (order: Order) => void }) => (
-  <article className={`order-ticket order-group-ticket order-${group.status}`}>
-    <div className="receipt-number"><small>ORDER</small><b>#{group.receiptNumber}</b><strong className="table-badge">TABLE {group.tableNumber}</strong><span className={`status-pill ${group.status}`}>{orderStatusLabels[group.status]}</span></div>
-    <div className="order-group-content">
-      <div className="order-group-meta"><span><UserRound />{group.ordererName}</span><span><Clock3 />{formatTime(group.createdAt)}</span><b>{group.orders.length}点</b></div>
-      <div className="order-group-items">{group.orders.map((order) => <OrderGroupItem key={order.id} order={order} onRecipe={() => onRecipe(order)} />)}</div>
-    </div>
-    {isStaff && <div className="status-actions">{group.status === 'pending' && <button type="button" className="status-action status-action-pending" onClick={() => onStatus('preparing')}><ChefHat />まとめて対応開始</button>}{group.status === 'preparing' && <button type="button" className="status-action status-action-preparing" onClick={() => onStatus('completed')}><CheckCircle2 />まとめて完了</button>}{group.status === 'completed' && <button type="button" className="status-action status-action-completed" onClick={() => onStatus('pending')}>未対応へ戻す</button>}</div>}
-  </article>
-);
-
-const OrderGroupItem = ({ order, onRecipe }: { order: Order; onRecipe: () => void }) => {
-  const isColorTwin = order.category === 'normal_cocktail' && order.productName === 'カラーツイン';
-  return <div className={`order-group-item${isColorTwin ? ' color-twin-item' : ''}`}>
-    <img className="order-thumb" src={order.productImageUrl} alt="" />
-    {isColorTwin ? <div className="order-main color-twin-main" aria-label={`色 ${colorLabels[order.color1]}と${colorLabels[order.color2]}、炭酸 ${order.carbonated ? 'あり' : 'なし'}、媚薬 ${order.aphrodisiac ? 'あり' : 'なし'}`}>
-      <span>{categoryLabels[order.category]}</span>
-      <div className="order-options color-twin-selection"><span><i className={`mini-color color-${order.color1}`} />{colorLabels[order.color1]} ＋ <i className={`mini-color color-${order.color2}`} />{colorLabels[order.color2]}</span><span>炭酸 <b>{order.carbonated ? 'あり' : 'なし'}</b></span><span>媚薬 <b>{order.aphrodisiac ? 'あり' : 'なし'}</b></span></div>
-      <div className="color-twin-name-row"><strong>{order.productName}</strong></div>
-    </div> : <div className="order-main"><span>{categoryLabels[order.category]}</span><h3>{order.productName}</h3>
-      {order.category === 'normal_cocktail' && <div className="order-options"><span><i className={`mini-color color-${order.color1}`} />{colorLabels[order.color1]} ＋ <i className={`mini-color color-${order.color2}`} />{colorLabels[order.color2]}</span><span>炭酸 <b>{order.carbonated ? 'あり' : 'なし'}</b></span><span>媚薬 <b>{order.aphrodisiac ? 'あり' : 'なし'}</b></span></div>}
-      {order.category === 'original_cocktail' && <button type="button" className="recipe-button" onClick={onRecipe}><Eye />レシピを開く</button>}
-    </div>}
-  </div>;
+const OrderCard = ({
+  group,
+  now,
+  isStaff,
+  busy,
+  onStatus,
+  onRecipe,
+}: {
+  group: OrderGroup;
+  now: number;
+  isStaff: boolean;
+  busy: boolean;
+  onStatus: (status: OrderStatus) => void;
+  onRecipe: (order: Order) => void;
+}) => {
+  const age = getOrderAge(group.createdAt, now);
+  const lines = summarizeOrderItems(group.orders);
+  return (
+    <article
+      className={`order-ticket ${group.status !== "completed" ? age.level : ""}`}
+    >
+      <header>
+        <div>
+          <b>#{group.receiptNumber}</b>
+          {age.isNew && group.status !== "completed" && (
+            <span className="new-badge">NEW</span>
+          )}
+        </div>
+        <span
+          className={`order-timer ${group.status === "completed" ? "" : age.level}`}
+        >
+          <Clock3 />
+          {group.status === "completed" ? "完了" : age.label}
+        </span>
+      </header>
+      <div className="order-meta">
+        <span className="table-label">
+          TABLE <b>{group.tableNumber}</b>
+        </span>
+        <span>
+          <UserRound />
+          {group.ordererName}
+        </span>
+        <time dateTime={group.createdAt}>{time(group.createdAt)}</time>
+      </div>
+      <div className="ticket-lines">
+        {lines.map(({ order, quantity }) => (
+          <div className="ticket-line" key={order.id}>
+            <div>
+              <strong>{order.productName}</strong>
+              {order.category === "normal_cocktail" && (
+                <OptionSummary options={order} />
+              )}
+              {order.category === "original_cocktail" && (
+                <button
+                  className="recipe-button"
+                  onClick={() => onRecipe(order)}
+                >
+                  <Eye />
+                  写真・レシピ
+                </button>
+              )}
+            </div>
+            <b>×{quantity}</b>
+          </div>
+        ))}
+      </div>
+      <footer>
+        <span className={`status-pill ${group.status}`}>
+          <i />
+          {orderStatusLabels[group.status]}
+        </span>
+        <small>{group.orders.length}点</small>
+      </footer>
+      {isStaff && (
+        <div className="status-actions">
+          {group.status !== "completed" ? (
+            <button
+              disabled={busy}
+              className={`status-action ${group.status}`}
+              onClick={() =>
+                onStatus(group.status === "pending" ? "preparing" : "completed")
+              }
+            >
+              {group.status === "pending" ? <ChefHat /> : <CheckCircle2 />}
+              {busy
+                ? "更新中…"
+                : group.status === "pending"
+                  ? "対応を開始"
+                  : "完了にする"}
+            </button>
+          ) : (
+            <>
+              <span className="completed-label">
+                <CheckCircle2 />
+                完了
+              </span>
+              <button
+                className="text-button"
+                disabled={busy}
+                onClick={() => onStatus("pending")}
+              >
+                未対応へ戻す
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </article>
+  );
 };

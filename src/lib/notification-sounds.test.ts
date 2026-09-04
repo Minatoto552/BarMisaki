@@ -23,7 +23,17 @@ class FakeAudioContext {
 describe('notification sounds', () => {
   beforeEach(() => {
     starts.length = 0;
+    localStorage.removeItem('barmisaki-sound');
     vi.stubGlobal('AudioContext', FakeAudioContext);
+  });
+
+  it('通知音オフなら、お知らせと緊急をどちらも再生しない', async () => {
+    const sounds = await import('./notification-sounds');
+    localStorage.setItem('barmisaki-sound', 'off');
+    sounds.playAnnouncementSound();
+    sounds.playEmergencySound();
+    expect(starts).toHaveLength(0);
+    localStorage.removeItem('barmisaki-sound');
   });
 
   it('お知らせと緊急で異なる音列を再生する', async () => {

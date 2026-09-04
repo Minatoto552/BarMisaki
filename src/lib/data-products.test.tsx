@@ -22,6 +22,23 @@ beforeEach(() => {
 afterEach(() => { cleanup(); localStorage.clear(); });
 
 describe('商品データの更新・削除', () => {
+  it('複製は別IDで登録し、元の商品と過去の注文を変更しない', async () => {
+    const { result } = renderHook(useData, { wrapper: DataProvider });
+    await act(() => result.current.duplicateProduct(product.id, { name: '星空 のコピー', category: 'original_cocktail', recipe: '新レシピ', image: null }, product.updatedAt));
+    expect(result.current.products).toHaveLength(2);
+    expect(result.current.products[0]).toMatchObject({ name: '星空 のコピー', recipe: '新レシピ', imageUrl: product.imageUrl, createdBy: 'user' });
+    expect(result.current.products[0].id).not.toBe(product.id);
+    expect(result.current.products[1]).toEqual(product);
+    expect(result.current.orders[0]).toMatchObject({ productName: product.name, recipe: '旧レシピ' });
+  });
+
+  it('名前だけ変更したプロフィールでも既存アイコンを保持する', async () => {
+    localStorage.setItem('vrc-order-profile', JSON.stringify({ id: 'user', displayName: 'テスト', iconUrl: '/avatar.png', createdAt: 'created' }));
+    const { result } = renderHook(useData, { wrapper: DataProvider });
+    await act(() => result.current.saveProfile('新しい名前', null));
+    expect(result.current.profile).toMatchObject({ displayName: '新しい名前', iconUrl: '/avatar.png', createdAt: 'created' });
+  });
+
   it('注文のテーブル番号を1〜18に制限する', async () => {
     const { result } = renderHook(useData, { wrapper: DataProvider });
     const item: CartItem = { id: 'cart-item', product, options: {}, quantity: 1 };

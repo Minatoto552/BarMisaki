@@ -22,6 +22,7 @@ const tone = (context: AudioContext, frequency: number, start: number, duration:
 };
 
 const play = (kind: SoundKind) => {
+  if (localStorage.getItem('barmisaki-sound') === 'off') return;
   if (!soundReady) return;
   const context = getAudioContext();
   if (context.state !== 'running') return;

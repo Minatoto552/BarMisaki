@@ -60,10 +60,11 @@ interface DataContextValue {
   announcements: Announcement[];
   isStaff: boolean;
   runtimeMode: typeof runtimeMode;
-  saveProfile: (displayName: string, image: File) => Promise<void>;
+  saveProfile: (displayName: string, image: File | null) => Promise<void>;
   addProduct: (draft: ProductDraft) => Promise<void>;
   updateProduct: (id: string, draft: ProductEditDraft, expectedUpdatedAt: string) => Promise<void>;
   deleteProduct: (id: string, expectedUpdatedAt: string) => Promise<void>;
+  duplicateProduct: (id: string, draft: ProductEditDraft, expectedUpdatedAt: string) => Promise<void>;
   placeCart: (items: CartItem[], tableNumber: string) => Promise<string>;
   sendEmergency: (kind: EmergencyKind, message: string) => Promise<void>;
   sendAnnouncement: (kind: AnnouncementKind, message: string) => Promise<void>;
@@ -241,10 +242,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     lastMutation.current = Date.now();
   };
 
-  const saveProfile = useCallback(async (displayName: string, image: File) => {
+  const saveProfile = useCallback(async (displayName: string, image: File | null) => {
     throttle();
     const uid = user?.uid || localUid;
-    const iconUrl = await uploadImage(image, `users/${uid}`);
+    const iconUrl = image ? await uploadImage(image, `users/${uid}`) : profile?.iconUrl;
+    if (!iconUrl) throw new Error('アイコンを選択してください。');
     const timestamp = nowIso();
     const next: UserProfile = {
       id: uid, displayName: displayName.trim(), iconUrl,
@@ -257,7 +259,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       writeJson(KEYS.profile, next);
     }
     setProfile(next);
-  }, [localUid, profile?.createdAt, uploadImage, user?.uid]);
+  }, [localUid, profile?.createdAt, profile?.iconUrl, uploadImage, user?.uid]);
 
   const addProduct = useCallback(async (draft: ProductDraft) => {
     throttle();
@@ -314,6 +316,22 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         return draft.category === 'original_cocktail' ? { ...base, category: draft.category, recipe: draft.recipe.trim() } : { ...base, category: draft.category };
       }));
     }
+  }, [products, requireProfile, uploadImage]);
+
+  const duplicateProduct = useCallback(async (id: string, draft: ProductEditDraft, expectedUpdatedAt: string) => {
+    const current = requireProfile();
+    const source = products.find(product => product.id === id);
+    assertProductRevision(source, expectedUpdatedAt);
+    const errors = validateProduct(draft.category, draft.name, draft.image, draft.recipe, source?.imageUrl);
+    if (errors.length) throw new Error(errors.join('\n'));
+    throttle();
+    const imageUrl = draft.image ? await uploadImage(draft.image, `products/${current.id}`) : source!.imageUrl;
+    const timestamp = nowIso();
+    const base = { name: draft.name.trim(), imageUrl, createdBy: current.id, creatorName: current.displayName, isAvailable: true, createdAt: timestamp, updatedAt: timestamp };
+    const next: ProductWithoutId = draft.category === 'original_cocktail' ? { ...base, category: draft.category, recipe: draft.recipe.trim() } : { ...base, category: draft.category };
+    const { db, firestoreApi } = await getFirebaseServices();
+    if (db && firestoreApi) await firestoreApi.addDoc(firestoreApi.collection(db, 'products'), next);
+    else writeJson(KEYS.products, [{ id: makeId(), ...next }, ...products]);
   }, [products, requireProfile, uploadImage]);
 
   const deleteProduct = useCallback(async (id: string, expectedUpdatedAt: string) => {
@@ -417,9 +435,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   const value = useMemo<DataContextValue>(() => ({
     ready, error, uid: user?.uid || localUid, profile, products, orders, emergencies, announcements, isStaff,
-    runtimeMode, saveProfile, addProduct, updateProduct, deleteProduct, placeCart, sendEmergency, sendAnnouncement, updateEmergency, updateOrder,
+    runtimeMode, saveProfile, addProduct, updateProduct, deleteProduct, duplicateProduct, placeCart, sendEmergency, sendAnnouncement, updateEmergency, updateOrder,
   }), [addProduct, announcements, emergencies, error, isStaff, localUid, orders, products, profile, ready,
-    saveProfile, sendAnnouncement, sendEmergency, updateEmergency, updateOrder, user?.uid, placeCart, updateProduct, deleteProduct]);
+    saveProfile, sendAnnouncement, sendEmergency, updateEmergency, updateOrder, user?.uid, placeCart, updateProduct, deleteProduct, duplicateProduct]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 };

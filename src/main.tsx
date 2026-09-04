@@ -4,9 +4,7 @@ import { HashRouter } from 'react-router-dom';
 
 import App from './App';
 import { DataProvider } from './lib/data';
-import './index.css';
-import './jack-theme.css';
-import './product-management.css';
+import './pos.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode><HashRouter><DataProvider><App /></DataProvider></HashRouter></StrictMode>,
