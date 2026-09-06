@@ -660,6 +660,24 @@ textarea::placeholder {
 .orders-toolbar > small {
   color: #a99bb7;
 }
+.orders-page {
+  max-width: 1920px;
+  padding-inline: clamp(28px, 4vw, 76px);
+}
+.sidebar-collapsed .orders-page {
+  max-width: none;
+  padding-inline: clamp(32px, 5vw, 104px);
+}
+.orders-page .order-summary {
+  gap: clamp(16px, 1.5vw, 26px);
+}
+.orders-page .summary-card {
+  min-height: 138px;
+  padding: 24px 28px;
+}
+.orders-page .orders-board {
+  width: 100%;
+}
 .order-ticket {
   background: #14101d;
   border-color: #ffffff20;
