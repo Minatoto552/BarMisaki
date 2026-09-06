@@ -145,16 +145,20 @@ export const AppShell = () => {
           aria-label="BarMisaki 注文画面へ"
         >
           <span className="brand-mark">
-            <Coffee />
+            <span aria-hidden="true">M</span>
           </span>
           <span>
-            <b>BarMisaki</b>
-            <small>ORDER SYSTEM</small>
+            <b>Bar Misaki</b>
+            <small>LOUNGE OPERATIONS</small>
           </span>
         </NavLink>
-        <p className="nav-section-label">WORKSPACE</p>
+        <p className="nav-section-label">FLOOR CONTROL</p>
         {nav()}
         <div className="sidebar-bottom">
+          <div className="sidebar-signature" aria-hidden="true">
+            <span>海咲</span>
+            <small>A NIGHT TO REMEMBER</small>
+          </div>
           <button
             className="sidebar-toggle"
             onClick={() => {

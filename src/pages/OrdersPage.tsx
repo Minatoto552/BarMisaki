@@ -119,7 +119,7 @@ export const OrdersPage = () => {
     <div className="page orders-page">
       <header className="page-heading">
         <div>
-          <span className="eyebrow">LIVE OPERATIONS</span>
+          <span className="eyebrow">FLOOR SERVICE / LIVE ORDERS</span>
           <h1>{isStaff ? "注文管理" : "注文状況"}</h1>
           <p>古い注文から優先して表示しています。</p>
         </div>
@@ -141,13 +141,14 @@ export const OrdersPage = () => {
           <button
             key={status}
             className={`summary-card ${status}`}
+            aria-pressed={filter === status}
             onClick={() => setFilter(status)}
           >
             <span>
               <i />
               {orderStatusLabels[status]}
             </span>
-            <b>{counts[status]}</b>
+            <b key={counts[status]}>{counts[status]}</b>
             <small>注文</small>
           </button>
         ))}

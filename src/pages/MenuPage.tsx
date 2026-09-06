@@ -170,9 +170,9 @@ export const MenuPage = () => {
         <section className="catalog" aria-label="商品一覧">
           <header className="page-heading">
             <div>
-              <span className="eyebrow">ORDER / MENU</span>
+              <span className="eyebrow">THE LOUNGE / ORDER SELECTION</span>
               <h1>注文</h1>
-              <p>商品を選んで、テーブルへ。</p>
+              <p>心を込めた一杯を、ゲストのテーブルへ。</p>
             </div>
             <label className="search-box">
               <Search />

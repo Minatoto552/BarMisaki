@@ -19,10 +19,12 @@ export const CartPanel = ({ onReview }: { onReview: () => void }) => {
     <section className="cart-panel" aria-label="現在の注文内容">
       <header>
         <div>
-          <span className="eyebrow">CURRENT ORDER</span>
+          <span className="eyebrow">TABLE SERVICE / CURRENT ORDER</span>
           <h2>注文内容</h2>
         </div>
-        <span className="count-badge">{quantity}点</span>
+        <span className="count-badge" key={quantity}>
+          {quantity}点
+        </span>
       </header>
       <div className="cart-items">
         {items.length ? (
@@ -65,6 +67,7 @@ export const CartPanel = ({ onReview }: { onReview: () => void }) => {
             <ShoppingBag />
             <h3>商品を選んでください</h3>
             <p>追加した商品がここに表示されます。</p>
+            <small>接客中のテーブルの注文を、まとめて確認できます。</small>
           </div>
         )}
       </div>

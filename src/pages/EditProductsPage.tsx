@@ -43,9 +43,9 @@ export const EditProductsPage = () => {
     <div className="page products-page">
       <header className="page-heading">
         <div>
-          <span className="eyebrow">CATALOG MANAGEMENT</span>
+          <span className="eyebrow">THE COLLECTION / MENU CATALOG</span>
           <h1>商品管理</h1>
-          <p>{products.length} Products · 全端末のメニューへ同期</p>
+          <p>ラウンジを彩るメニュー · {products.length}商品</p>
         </div>
         <button
           className="primary-button"

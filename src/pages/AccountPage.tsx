@@ -1,5 +1,5 @@
-import { BadgeCheck } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { BadgeCheck, UserRound } from "lucide-react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ImageField } from "../components/ImageField";
 import { useData } from "../lib/data";
@@ -17,6 +17,16 @@ const ProfileSettings = () => {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
+  const previewUrl = useMemo(
+    () => (image ? URL.createObjectURL(image) : ""),
+    [image],
+  );
+  useEffect(
+    () => () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    },
+    [previewUrl],
+  );
   const notice = (location.state as { notice?: string } | null)?.notice;
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -46,7 +56,7 @@ const ProfileSettings = () => {
     <div className="page account-page">
       <header className="page-heading">
         <div>
-          <span className="eyebrow">PERSONAL SETTINGS</span>
+          <span className="eyebrow">PROFILE / STAFF IDENTITY</span>
           <h1>アカウント</h1>
           <p>注文・通知に表示されるプロフィールを管理します。</p>
         </div>
@@ -54,18 +64,37 @@ const ProfileSettings = () => {
       {notice && <p className="product-management-note">{notice}</p>}
       <section className="settings-card">
         <div className="settings-description">
-          <h2>プロフィール</h2>
-          <p>
-            メールアドレスやパスワードは不要です。名前とアイコンを登録して注文を開始できます。
-          </p>
-          {profile && (
-            <div className="profile-preview">
-              <img src={profile.iconUrl} alt="" />
-              <strong>{profile.displayName}</strong>
+          <div className="identity-card">
+            <div className="identity-masthead">
+              <span>Bar Misaki</span>
+              <small>STAFF IDENTITY</small>
             </div>
-          )}
+            <div className="identity-portrait">
+              {(image ? previewUrl : profile?.iconUrl) ? (
+                <img
+                  src={image ? previewUrl : profile?.iconUrl}
+                  alt="プロフィールプレビュー"
+                />
+              ) : (
+                <UserRound aria-hidden="true" />
+              )}
+            </div>
+            <div className="identity-caption">
+              <span>YOUR NAME</span>
+              <strong>{name.trim() || "Your identity"}</strong>
+              <small>LOUNGE & GUEST SERVICE</small>
+            </div>
+          </div>
+          <p className="identity-note">
+            あなたの名前とアイコンが、注文や通知に表示されます。
+          </p>
         </div>
         <form onSubmit={(e) => void submit(e)}>
+          <div className="profile-form-heading">
+            <span className="eyebrow">PERSONAL DETAILS</span>
+            <h2>プロフィールを整える</h2>
+            <p>接客の場で使う名前とアイコンを設定してください。</p>
+          </div>
           <fieldset disabled={busy}>
             <label className="field">
               <span>
