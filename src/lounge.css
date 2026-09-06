@@ -575,6 +575,218 @@ textarea::placeholder {
 .order-meta {
   color: #b8aac5;
 }
+.order-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid #c9a96e30;
+  border-radius: 7px;
+  background: #130f1b;
+  scrollbar-color: #5d456f #100c16;
+}
+.order-table {
+  min-width: 960px;
+}
+.order-table-head,
+.order-catalog-row {
+  display: grid;
+  grid-template-columns:
+    minmax(82px, 0.75fr) minmax(280px, 2.8fr) minmax(70px, 0.7fr)
+    minmax(90px, 0.9fr) minmax(65px, 0.65fr) minmax(72px, 0.7fr)
+    minmax(78px, 0.75fr) minmax(108px, 0.95fr);
+  align-items: stretch;
+}
+.order-table-head {
+  min-height: 52px;
+  align-items: center;
+  color: #cdb894;
+  background: #1b1524;
+  border-bottom: 1px solid #c9a96e2b;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+.order-table-head > span,
+.order-catalog-row > [role="cell"] {
+  min-width: 0;
+  padding: 14px 12px;
+  border-right: 1px solid #ffffff0c;
+}
+.order-table-head > span:last-child,
+.order-catalog-row > [role="cell"]:last-child {
+  border-right: 0;
+}
+.order-catalog-row {
+  position: relative;
+  color: #c9c0d1;
+  border-bottom: 1px solid #ffffff12;
+  transition: background 0.16s ease;
+}
+.order-catalog-row:last-child {
+  border-bottom: 0;
+}
+.order-catalog-row:hover {
+  background: #21182b;
+}
+.order-catalog-row::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 2px;
+  background: transparent;
+}
+.order-catalog-row.waiting::before {
+  background: #c9a96e;
+}
+.order-catalog-row.late::before {
+  background: #e88b45;
+}
+.order-catalog-row.critical::before {
+  background: #e45c79;
+}
+.order-number-cell strong {
+  color: #e5d4b7;
+  font-size: 16px;
+  letter-spacing: -0.01em;
+}
+.order-number-cell .new-badge {
+  display: inline-flex;
+  margin-top: 8px;
+}
+.order-products-cell {
+  padding-block: 6px !important;
+}
+.order-product-line {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 54px;
+  padding: 6px 0;
+  border-bottom: 1px solid #ffffff0d;
+}
+.order-product-line:last-child {
+  border-bottom: 0;
+}
+.order-product-thumb {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+  border: 1px solid #c9a96e30;
+  border-radius: 4px;
+  color: #9b87ae;
+  background: #201927;
+}
+.order-product-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.order-product-thumb svg {
+  width: 18px;
+  height: 18px;
+}
+.order-product-copy {
+  min-width: 0;
+}
+.order-product-copy > strong {
+  display: block;
+  color: #fff;
+  font-size: 13px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.order-product-copy .option-summary {
+  margin-top: 5px;
+}
+.order-product-copy .recipe-button {
+  margin: 4px 0 0;
+  padding-left: 0;
+}
+.order-product-quantity {
+  color: #e8e0ef;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.order-table-cell,
+.order-action-cell,
+.order-number-cell {
+  display: flex;
+  align-items: center;
+}
+.order-number-cell,
+.table-cell {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+}
+.table-cell small {
+  color: #a98f65;
+  font-size: 8px;
+  letter-spacing: 0.12em;
+}
+.table-cell strong {
+  color: #fff;
+  font-family: Georgia, serif;
+  font-size: 21px;
+}
+.assignee-cell {
+  gap: 7px;
+  color: #e0d7e7;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.assignee-avatar {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid #b79ac44a;
+  border-radius: 50%;
+  color: #bba9c9;
+}
+.assignee-avatar svg {
+  width: 13px;
+  height: 13px;
+}
+.ordered-time-cell,
+.elapsed-cell {
+  color: #c1b7ca;
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+}
+.elapsed-cell.waiting {
+  color: #d5b76f;
+}
+.elapsed-cell.late {
+  color: #ee9a55;
+}
+.elapsed-cell.critical {
+  color: #ee7189;
+  font-weight: 700;
+}
+.elapsed-cell.completed {
+  color: #746b7b;
+}
+.status-cell .status-pill {
+  white-space: nowrap;
+}
+.order-action-cell {
+  justify-content: center;
+}
+.order-action-cell button {
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 10px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.order-action-cell .text-button {
+  color: #b9a8c7;
+  border: 1px solid #ffffff1e;
+}
 .table-label {
   background: #c9a96e14;
   border: 1px solid #c9a96e30;

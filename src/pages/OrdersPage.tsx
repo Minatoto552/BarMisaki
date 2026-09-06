@@ -3,7 +3,6 @@ import {
   BellRing,
   CheckCircle2,
   ChefHat,
-  Clock3,
   Eye,
   UserRound,
 } from "lucide-react";
@@ -215,18 +214,30 @@ export const OrdersPage = () => {
           <small>履歴は毎日5:00に表示をリセット</small>
         </div>
         {visible.length ? (
-          <div className="order-list">
-            {visible.map((group) => (
-              <OrderCard
-                key={group.id}
-                group={group}
-                now={now}
-                isStaff={isStaff}
-                busy={!!busy}
-                onStatus={(status) => void change(group, status)}
-                onRecipe={setRecipe}
-              />
-            ))}
+          <div className="order-table-scroll">
+            <div className="order-table" role="table" aria-label="注文一覧">
+              <div className="order-table-head" role="row">
+                <span role="columnheader">注文番号</span>
+                <span role="columnheader">注文商品</span>
+                <span role="columnheader">テーブル</span>
+                <span role="columnheader">担当</span>
+                <span role="columnheader">注文時刻</span>
+                <span role="columnheader">経過時間</span>
+                <span role="columnheader">状態</span>
+                <span role="columnheader">操作</span>
+              </div>
+              {visible.map((group) => (
+                <OrderRow
+                  key={group.id}
+                  group={group}
+                  now={now}
+                  isStaff={isStaff}
+                  busy={!!busy}
+                  onStatus={(status) => void change(group, status)}
+                  onRecipe={setRecipe}
+                />
+              ))}
+            </div>
           </div>
         ) : (
           <div className="empty-state">
@@ -262,7 +273,27 @@ export const OrdersPage = () => {
     </div>
   );
 };
-const OrderCard = ({
+const elapsed = (createdAt: string, now: number) => {
+  const total = Math.max(0, Math.floor((now - Date.parse(createdAt)) / 1000));
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const seconds = total % 60;
+  const value = [minutes, seconds]
+    .map((part) => String(part).padStart(2, "0"))
+    .join(":");
+  return {
+    value: hours ? `${String(hours).padStart(2, "0")}:${value}` : value,
+    tone:
+      total >= 900
+        ? "critical"
+        : total >= 600
+          ? "late"
+          : total >= 300
+            ? "waiting"
+            : "normal",
+  };
+};
+const OrderRow = ({
   group,
   now,
   isStaff,
@@ -278,39 +309,37 @@ const OrderCard = ({
   onRecipe: (order: Order) => void;
 }) => {
   const age = getOrderAge(group.createdAt, now);
+  const duration = elapsed(group.createdAt, now);
   const lines = summarizeOrderItems(group.orders);
   return (
     <article
-      className={`order-ticket ${group.status !== "completed" ? age.level : ""}`}
+      className={`order-catalog-row ${group.status !== "completed" ? duration.tone : ""}`}
+      role="row"
     >
-      <header>
+      <div className="order-number-cell" role="cell">
+        <strong>#{group.receiptNumber}</strong>
         <div>
-          <b>#{group.receiptNumber}</b>
           {age.isNew && group.status !== "completed" && (
             <span className="new-badge">NEW</span>
           )}
         </div>
-        <span
-          className={`order-timer ${group.status === "completed" ? "" : age.level}`}
-        >
-          <Clock3 />
-          {group.status === "completed" ? "完了" : age.label}
-        </span>
-      </header>
-      <div className="order-meta">
-        <span className="table-label">
-          TABLE <b>{group.tableNumber}</b>
-        </span>
-        <span>
-          <UserRound />
-          {group.ordererName}
-        </span>
-        <time dateTime={group.createdAt}>{time(group.createdAt)}</time>
       </div>
-      <div className="ticket-lines">
+      <div className="order-products-cell" role="cell">
         {lines.map(({ order, quantity }) => (
-          <div className="ticket-line" key={order.id}>
-            <div>
+          <div className="order-product-line" key={order.id}>
+            <div className="order-product-thumb">
+              {order.productImageUrl ? (
+                <img
+                  src={order.productImageUrl}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                />
+              ) : (
+                <ChefHat aria-hidden="true" />
+              )}
+            </div>
+            <div className="order-product-copy">
               <strong>{order.productName}</strong>
               {order.category === "normal_cocktail" && (
                 <OptionSummary options={order} />
@@ -325,20 +354,42 @@ const OrderCard = ({
                 </button>
               )}
             </div>
-            <b>×{quantity}</b>
+            <b className="order-product-quantity">×{quantity}</b>
           </div>
         ))}
       </div>
-      <footer>
+      <div className="order-table-cell table-cell" role="cell">
+        <small>TABLE</small>
+        <strong>{String(group.tableNumber).padStart(2, "0")}</strong>
+      </div>
+      <div className="order-table-cell assignee-cell" role="cell">
+        <span className="assignee-avatar">
+          <UserRound />
+        </span>
+        <span>{group.ordererName}</span>
+      </div>
+      <time
+        className="order-table-cell ordered-time-cell"
+        role="cell"
+        dateTime={group.createdAt}
+      >
+        {time(group.createdAt)}
+      </time>
+      <div
+        className={`order-table-cell elapsed-cell ${group.status === "completed" ? "completed" : duration.tone}`}
+        role="cell"
+      >
+        {group.status === "completed" ? "—" : duration.value}
+      </div>
+      <div className="order-table-cell status-cell" role="cell">
         <span className={`status-pill ${group.status}`}>
           <i />
           {orderStatusLabels[group.status]}
         </span>
-        <small>{group.orders.length}点</small>
-      </footer>
-      {isStaff && (
-        <div className="status-actions">
-          {group.status !== "completed" ? (
+      </div>
+      <div className="order-action-cell" role="cell">
+        {isStaff ? (
+          group.status !== "completed" ? (
             <button
               disabled={busy}
               className={`status-action ${group.status}`}
@@ -354,22 +405,18 @@ const OrderCard = ({
                   : "完了にする"}
             </button>
           ) : (
-            <>
-              <span className="completed-label">
-                <CheckCircle2 />
-                完了
-              </span>
-              <button
-                className="text-button"
-                disabled={busy}
-                onClick={() => onStatus("pending")}
-              >
-                未対応へ戻す
-              </button>
-            </>
-          )}
-        </div>
-      )}
+            <button
+              className="text-button"
+              disabled={busy}
+              onClick={() => onStatus("pending")}
+            >
+              未対応へ戻す
+            </button>
+          )
+        ) : (
+          <span className="muted">—</span>
+        )}
+      </div>
     </article>
   );
 };
