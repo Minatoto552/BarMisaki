@@ -1,16 +1,5 @@
-import {
-  Check,
-  Minus,
-  Plus,
-  Search,
-  ShoppingBag,
-  List,
-  LayoutGrid,
-} from "lucide-react";
-import {
-  OrderProductCard,
-  type ProductViewMode,
-} from "../components/OrderProductCard";
+import { Check, Minus, Plus, Search, ShoppingBag } from "lucide-react";
+import { OrderProductCard } from "../components/OrderProductCard";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Modal } from "../components/Modal";
@@ -36,23 +25,6 @@ export const MenuPage = () => {
   const [category, setCategory] = useState<ProductCategory | "all">("all");
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("default");
-  const [viewMode, setViewMode] = useState<ProductViewMode>(() => {
-    try {
-      return localStorage.getItem("barmisaki-product-view") === "image"
-        ? "image"
-        : "compact";
-    } catch {
-      return "compact";
-    }
-  });
-  const changeView = (mode: ProductViewMode) => {
-    setViewMode(mode);
-    try {
-      localStorage.setItem("barmisaki-product-view", mode);
-    } catch {
-      /* Private browsing may disable storage. */
-    }
-  };
   const [selected, setSelected] = useState<Product | null>(null);
   const [options, setOptions] = useState<OrderOptions>({});
   const [quantity, setQuantity] = useState(1);
@@ -217,41 +189,16 @@ export const MenuPage = () => {
           </div>
           <div className="catalog-caption">
             <span>{search ? "全カテゴリーの検索結果" : "メニュー"}</span>
-            <div className="catalog-view-tools">
-              <span>{visible.length}商品</span>
-              <div
-                className="product-view-switch"
-                role="group"
-                aria-label="商品の表示方法"
-              >
-                <button
-                  aria-pressed={viewMode === "compact"}
-                  onClick={() => changeView("compact")}
-                >
-                  <List />
-                  コンパクト
-                </button>
-                <button
-                  aria-pressed={viewMode === "image"}
-                  onClick={() => changeView("image")}
-                >
-                  <LayoutGrid />
-                  画像
-                </button>
-              </div>
-            </div>
+            <span>{visible.length}商品</span>
           </div>
           {!ready ? (
             <p role="status">商品を読み込んでいます…</p>
           ) : visible.length ? (
-            <div
-              className={`pos-product-grid ${viewMode === "compact" ? "compact-product-grid" : "image-product-grid"}`}
-            >
+            <div className="pos-product-grid compact-product-grid">
               {visible.map((product) => (
                 <OrderProductCard
                   key={product.id}
                   product={product}
-                  mode={viewMode}
                   onChoose={choose}
                 />
               ))}

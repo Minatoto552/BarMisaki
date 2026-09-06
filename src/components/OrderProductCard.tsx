@@ -2,15 +2,11 @@ import { Coffee, Plus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { categoryLabels, type Product } from "../types";
 
-export type ProductViewMode = "compact" | "image";
-
 export const OrderProductCard = ({
   product,
-  mode,
   onChoose,
 }: {
   product: Product;
-  mode: ProductViewMode;
   onChoose: (product: Product) => void;
 }) => {
   const [failedImage, setFailedImage] = useState("");
@@ -26,30 +22,25 @@ export const OrderProductCard = ({
   };
   return (
     <button
-      className={`pos-product-card ${mode === "compact" ? "compact-product-card" : ""} ${pressed ? "product-pressed" : ""}`}
+      className={`pos-product-card compact-product-card ${pressed ? "product-pressed" : ""}`}
       onClick={choose}
       aria-label={`${product.name}${optional ? "をカスタマイズ" : "をカートに追加"}`}
     >
-      {mode === "image" && (
-        <div className="pos-product-image">
-          {product.imageUrl && failedImage !== product.imageUrl ? (
-            <img
-              src={product.imageUrl}
-              alt=""
-              loading="lazy"
-              decoding="async"
-              onError={() => setFailedImage(product.imageUrl)}
-            />
-          ) : (
-            <span
-              className="product-image-placeholder"
-              aria-label="商品画像なし"
-            >
-              <Coffee />
-            </span>
-          )}
-        </div>
-      )}
+      <div className="pos-product-image">
+        {product.imageUrl && failedImage !== product.imageUrl ? (
+          <img
+            src={product.imageUrl}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            onError={() => setFailedImage(product.imageUrl)}
+          />
+        ) : (
+          <span className="product-image-placeholder" aria-label="商品画像なし">
+            <Coffee />
+          </span>
+        )}
+      </div>
       <div className="pos-product-copy">
         <strong>{product.name}</strong>
         <small>{categoryLabels[product.category]}</small>

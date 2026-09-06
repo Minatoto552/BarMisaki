@@ -45,14 +45,10 @@ beforeEach(() => {
   state.placeCart.mockResolvedValue("12345");
 });
 describe("POS注文フロー", () => {
-  it("初回は画像なし。表示切替でも検索・カテゴリー・並び順・カートを維持し設定を保存する", () => {
-    const view = open();
+  it("小さい商品画像を表示し、検索・カテゴリー・並び順・カートを維持する", () => {
+    open();
     const catalog = screen.getByRole("region", { name: "商品一覧" });
-    expect(screen.getByRole("button", { name: "コンパクト" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    expect(catalog.querySelector("img")).toBeNull();
+    expect(catalog.querySelector('img[src="/x.png"]')).not.toBeNull();
     fireEvent.click(
       screen
         .getByRole("button", { name: "ソーダをカートに追加" })
@@ -65,8 +61,6 @@ describe("POS注文フロー", () => {
     fireEvent.change(screen.getByLabelText("並び順"), {
       target: { value: "name" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "画像" }));
-    expect(catalog.querySelectorAll("img")).toHaveLength(1);
     expect(screen.getByRole("textbox", { name: "商品を検索" })).toHaveValue(
       "ソーダ",
     );
@@ -81,12 +75,6 @@ describe("POS注文フロー", () => {
     expect(
       screen.getByRole("button", { name: "ソーダを1個減らす" }).parentElement,
     ).toHaveTextContent("1");
-    expect(localStorage.getItem("barmisaki-product-view")).toBe("image");
-    view.unmount();
-    open();
-    expect(
-      screen.getByRole("button", { name: "画像" }),
-    ).toHaveAttribute("aria-pressed", "true");
   });
   it("カードから即時追加し、確認までは送信しない。18番・数量2を送る", async () => {
     open();
