@@ -22,7 +22,7 @@ export const OrderProductCard = ({
   };
   return (
     <button
-      className={`pos-product-card compact-product-card ${pressed ? "product-pressed" : ""}`}
+      className={`pos-product-card visual-product-card ${pressed ? "product-pressed" : ""}`}
       onClick={choose}
       aria-label={`${product.name}${optional ? "をカスタマイズ" : "をカートに追加"}`}
     >

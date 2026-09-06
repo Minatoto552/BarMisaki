@@ -194,7 +194,7 @@ export const MenuPage = () => {
           {!ready ? (
             <p role="status">商品を読み込んでいます…</p>
           ) : visible.length ? (
-            <div className="pos-product-grid compact-product-grid">
+            <div className="pos-product-grid visual-product-grid">
               {visible.map((product) => (
                 <OrderProductCard
                   key={product.id}
