@@ -9,7 +9,7 @@ export const AccountPage = () => {
   return <ProfileSettings key={profile?.id || "new"} />;
 };
 const ProfileSettings = () => {
-  const { profile, saveProfile } = useData();
+  const { profile, recoverableProfiles = [], saveProfile, restoreProfile } = useData();
   const navigate = useNavigate();
   const location = useLocation();
   const [name, setName] = useState(profile?.displayName || "");
@@ -62,6 +62,26 @@ const ProfileSettings = () => {
         </div>
       </header>
       {notice && <p className="product-management-note">{notice}</p>}
+      {!profile && recoverableProfiles.length > 0 && (
+        <section className="settings-card account-recovery">
+          <div>
+            <span className="eyebrow">ACCOUNT RECOVERY</span>
+            <h2>以前のアカウントを復元</h2>
+            <p>この端末で使用していたアカウントを選択してください。</p>
+          </div>
+          <div className="recovery-profiles">
+            {recoverableProfiles.map((candidate) => (
+              <button key={candidate.id} className="secondary-button" disabled={busy} onClick={() => {
+                setBusy(true); setError("");
+                void restoreProfile(candidate).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "復元できませんでした。")).finally(() => setBusy(false));
+              }}>
+                <img src={candidate.iconUrl} alt="" />
+                {candidate.displayName}を復元
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
       <section className="settings-card">
         <div className="settings-description">
           <div className="identity-card">

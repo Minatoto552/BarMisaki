@@ -54,6 +54,7 @@ interface DataContextValue {
   error: string | null;
   uid: string;
   profile: UserProfile | null;
+  recoverableProfiles: UserProfile[];
   products: Product[];
   orders: Order[];
   emergencies: Emergency[];
@@ -61,6 +62,7 @@ interface DataContextValue {
   isStaff: boolean;
   runtimeMode: typeof runtimeMode;
   saveProfile: (displayName: string, image: File | null) => Promise<void>;
+  restoreProfile: (source: UserProfile) => Promise<void>;
   addProduct: (draft: ProductDraft) => Promise<void>;
   updateProduct: (id: string, draft: ProductEditDraft, expectedUpdatedAt: string) => Promise<void>;
   deleteProduct: (id: string, expectedUpdatedAt: string) => Promise<void>;
@@ -146,6 +148,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     return next;
   });
   const [profile, setProfile] = useState<UserProfile | null>(() => readJson(KEYS.profile, null));
+  const [knownProfiles, setKnownProfiles] = useState<UserProfile[]>([]);
   const [products, setProducts] = useState<Product[]>(() => readJson(KEYS.products, sampleProducts));
   const [orders, setOrders] = useState<Order[]>(() => readJson(KEYS.orders, []));
   const [emergencies, setEmergencies] = useState<Emergency[]>(() => readJson(KEYS.emergencies, []));
@@ -250,6 +253,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         onSnapshot(query(collection(db, 'announcements'), orderBy('createdAt', 'desc')), (snapshot) => {
           setAnnouncements(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as Announcement));
         }),
+        onSnapshot(collection(db, 'users'), (snapshot) => {
+          setKnownProfiles(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as UserProfile));
+        }),
       ];
     });
     return () => {
@@ -322,6 +328,18 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     cacheProfile(next);
     setProfile(next);
   }, [localUid, profile?.createdAt, profile?.iconUrl, uploadImage, user?.uid]);
+
+  const restoreProfile = useCallback(async (source: UserProfile) => {
+    if (runtimeMode !== 'sample' && !user) throw new Error('接続の準備中です。');
+    const uid = user?.uid || localUid;
+    const timestamp = nowIso();
+    const restored: UserProfile = { ...source, id: uid, updatedAt: timestamp };
+    const { db, firestoreApi } = await getFirebaseServices();
+    if (db && firestoreApi) await firestoreApi.setDoc(firestoreApi.doc(db, 'users', uid), restored);
+    else writeJson(KEYS.profile, restored);
+    cacheProfile(restored);
+    setProfile(restored);
+  }, [localUid, user]);
 
   const addProduct = useCallback(async (draft: ProductDraft) => {
     throttle();
@@ -498,10 +516,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   }, [orders]);
 
   const value = useMemo<DataContextValue>(() => ({
-    ready, error, uid: user?.uid || localUid, profile, products, orders, emergencies, announcements, isStaff,
-    runtimeMode, saveProfile, addProduct, updateProduct, deleteProduct, duplicateProduct, placeCart, sendEmergency, sendAnnouncement, updateEmergency, updateOrder,
+    ready, error, uid: user?.uid || localUid, profile,
+    recoverableProfiles: knownProfiles.filter((candidate) => candidate.id !== user?.uid && products.some((product) => product.createdBy === candidate.id)),
+    products, orders, emergencies, announcements, isStaff,
+    runtimeMode, saveProfile, restoreProfile, addProduct, updateProduct, deleteProduct, duplicateProduct, placeCart, sendEmergency, sendAnnouncement, updateEmergency, updateOrder,
   }), [addProduct, announcements, emergencies, error, isStaff, localUid, orders, products, profile, ready,
-    saveProfile, sendAnnouncement, sendEmergency, updateEmergency, updateOrder, user?.uid, placeCart, updateProduct, deleteProduct, duplicateProduct]);
+    saveProfile, restoreProfile, knownProfiles, sendAnnouncement, sendEmergency, updateEmergency, updateOrder, user?.uid, placeCart, updateProduct, deleteProduct, duplicateProduct]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 };

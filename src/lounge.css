@@ -678,6 +678,10 @@ textarea::placeholder {
 .orders-page .orders-board {
   width: 100%;
 }
+.account-recovery { margin-bottom: 24px; }
+.recovery-profiles { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.recovery-profiles button { display: inline-flex; align-items: center; gap: 10px; }
+.recovery-profiles img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
 .order-ticket {
   background: #14101d;
   border-color: #ffffff20;
