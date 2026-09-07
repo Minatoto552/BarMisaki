@@ -93,6 +93,10 @@ const writeJson = (key: string, value: unknown) => {
   window.dispatchEvent(new Event(LOCAL_EVENT));
 };
 
+const cacheProfile = (value: UserProfile) => {
+  localStorage.setItem(KEYS.profile, JSON.stringify(value));
+};
+
 const toDataUrl = (file: File): Promise<string> =>
   new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -148,6 +152,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const [announcements, setAnnouncements] = useState<Announcement[]>(() => readJson(KEYS.announcements, []));
   const [isStaff, setIsStaff] = useState(true);
   const lastMutation = useRef(0);
+  const recoveringProfile = useRef(false);
 
   useEffect(() => {
     if (runtimeMode === 'sample') {
@@ -205,7 +210,32 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       const { collection, doc, onSnapshot, orderBy, query, where } = firestoreApi;
       unsubscribers = [
         onSnapshot(doc(db, 'users', user.uid), (snapshot) => {
-          setProfile(snapshot.exists() ? ({ id: snapshot.id, ...snapshot.data() } as UserProfile) : null);
+          if (snapshot.exists()) {
+            const current = { id: snapshot.id, ...snapshot.data() } as UserProfile;
+            cacheProfile(current);
+            setProfile(current);
+            recoveringProfile.current = false;
+            return;
+          }
+          const cached = readJson<UserProfile | null>(KEYS.profile, null);
+          if (!cached || recoveringProfile.current) {
+            setProfile(null);
+            return;
+          }
+          recoveringProfile.current = true;
+          const restored: UserProfile = {
+            ...cached,
+            id: user.uid,
+            updatedAt: nowIso(),
+          };
+          cacheProfile(restored);
+          setProfile(restored);
+          void firestoreApi.setDoc(doc(db, 'users', user.uid), restored).catch((reason: unknown) => {
+            recoveringProfile.current = false;
+            setProfile(null);
+            const detail = reason instanceof Error ? reason.message : String(reason);
+            setError(`アカウント情報を復元できませんでした。${detail}`);
+          });
         }),
         onSnapshot(query(collection(db, 'products'), orderBy('createdAt', 'desc')), (snapshot) => {
           setProducts(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as Product));
@@ -252,16 +282,18 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         return existing;
       }
     }
+    const cached = readJson<UserProfile | null>(KEYS.profile, null);
     const timestamp = nowIso();
     const created: UserProfile = {
       id: uid,
-      displayName: 'ゲスト',
-      iconUrl: GUEST_ICON,
-      createdAt: timestamp,
+      displayName: cached?.displayName || 'ゲスト',
+      iconUrl: cached?.iconUrl || GUEST_ICON,
+      createdAt: cached?.createdAt || timestamp,
       updatedAt: timestamp,
     };
     if (db && firestoreApi) await firestoreApi.setDoc(firestoreApi.doc(db, 'users', uid), created);
     else writeJson(KEYS.profile, created);
+    cacheProfile(created);
     setProfile(created);
     return created;
   }, [localUid, profile, user]);
@@ -287,6 +319,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     } else {
       writeJson(KEYS.profile, next);
     }
+    cacheProfile(next);
     setProfile(next);
   }, [localUid, profile?.createdAt, profile?.iconUrl, uploadImage, user?.uid]);
 
