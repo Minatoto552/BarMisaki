@@ -53,8 +53,9 @@ export const ProductForm = ({
       else await addProduct(draft);
       onSaved();
     } catch (reason) {
+      if (import.meta.env.DEV) console.error("商品の保存に失敗しました。", reason);
       setErrors([
-        reason instanceof Error ? reason.message : "保存できませんでした。",
+        reason instanceof Error ? reason.message : "商品の追加に失敗しました。",
       ]);
     } finally {
       setBusy(false);

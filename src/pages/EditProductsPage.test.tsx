@@ -6,7 +6,7 @@ import { EditProductsPage } from './EditProductsPage';
 
 const state = vi.hoisted(() => ({
   products: [] as Product[], profile: { displayName: 'テスト' } as { displayName: string } | null,
-  updateProduct: vi.fn(), deleteProduct: vi.fn(),
+  addProduct: vi.fn(), updateProduct: vi.fn(), deleteProduct: vi.fn(),
 }));
 vi.mock('../lib/data', () => ({ useData: () => ({ ...state, ready: true }) }));
 const product: Product = {
@@ -67,10 +67,18 @@ describe('商品編集', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('通信に失敗しました');
     expect(screen.getByLabelText(/商品名/)).toHaveValue('星空');
   });
-  it('未登録ユーザーの変更を禁止し、商品検索できる', () => {
+  it('未登録ユーザーでも商品を追加できる', async () => {
     state.profile = null;
     open(); expect(screen.getByRole('button', { name: '星空の操作' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: '商品を追加' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: '商品を追加' }));
+    expect(screen.getByRole('dialog', { name: '商品を追加' })).toBeInTheDocument();
+    fireEvent.change(within(screen.getByRole('dialog')).getByLabelText('カテゴリー'), { target: { value: 'juice' } });
+    fireEvent.change(screen.getByLabelText(/商品名/), { target: { value: 'テストジュース' } });
+    fireEvent.click(screen.getByRole('button', { name: '商品を登録' }));
+    await waitFor(() => expect(state.addProduct).toHaveBeenCalledWith({
+      name: 'テストジュース', category: 'juice', recipe: '', image: null,
+    }));
+    expect(await screen.findByRole('status')).toHaveTextContent('商品を追加しました');
     fireEvent.change(screen.getByRole('textbox', { name: '編集する商品を検索' }), { target: { value: '該当なし' } });
     expect(screen.getByText('検索に一致する商品がありません')).toBeInTheDocument();
   });

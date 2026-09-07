@@ -49,7 +49,6 @@ export const EditProductsPage = () => {
         </div>
         <button
           className="primary-button"
-          disabled={!profile}
           onClick={() => {
             setNotice("");
             setParams({ create: "1" });
@@ -171,7 +170,7 @@ export const EditProductsPage = () => {
       <p className="product-management-note">
         編集・削除後も、受付済みの注文の写真・商品名・レシピは保持されます。
       </p>
-      {(creating || editing) && profile && (
+      {(creating || editing) && (
         <ProductForm
           key={editing?.id || "create"}
           product={editing || undefined}
@@ -180,7 +179,7 @@ export const EditProductsPage = () => {
           onSaved={() => {
             setNotice(
               creating || duplicate
-                ? "商品を登録しました。"
+                ? "商品を追加しました。"
                 : "商品を更新しました。",
             );
             closeForm();

@@ -141,7 +141,9 @@ export const OrdersPage = () => {
             key={status}
             className={`summary-card ${status}`}
             aria-pressed={filter === status}
-            onClick={() => setFilter(status)}
+            onClick={() =>
+              setFilter((current) => (current === status ? "all" : status))
+            }
           >
             <span>
               <i />
@@ -198,19 +200,6 @@ export const OrdersPage = () => {
       )}
       <section className="orders-board">
         <div className="orders-toolbar">
-          <div className="category-tabs" aria-label="注文状態">
-            {(["all", ...orderStatuses] as StatusFilter[]).map((status) => (
-              <button
-                key={status}
-                className={filter === status ? "active" : ""}
-                aria-pressed={filter === status}
-                onClick={() => setFilter(status)}
-              >
-                {status === "all" ? "すべて" : orderStatusLabels[status]}
-                <span className="count-badge">{counts[status]}</span>
-              </button>
-            ))}
-          </div>
           <small>履歴は毎日5:00に表示をリセット</small>
         </div>
         {visible.length ? (

@@ -124,6 +124,7 @@ const compressImage = async (file: File, maxSide = 720, quality = 0.72): Promise
 
 const makeId = () => crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 const nowIso = () => new Date().toISOString();
+const GUEST_ICON = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"%3E%3Crect width="64" height="64" rx="32" fill="%236d4aa1"/%3E%3Ccircle cx="32" cy="25" r="11" fill="white"/%3E%3Cpath d="M13 56c2-12 10-18 19-18s17 6 19 18" fill="white"/%3E%3C/svg%3E';
 
 const assertProductRevision = (product: Product | undefined, expectedUpdatedAt: string) => {
   if (!product) throw new Error('この商品はすでに削除されています。商品一覧をご確認ください。');
@@ -237,6 +238,34 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     return profile;
   }, [profile]);
 
+  const ensureProfile = useCallback(async () => {
+    if (profile) return profile;
+    if (runtimeMode !== 'sample' && !user) throw new Error('接続の準備中です。少し待ってからもう一度お試しください。');
+    const uid = user?.uid || localUid;
+    const { db, firestoreApi } = await getFirebaseServices();
+    if (db && firestoreApi) {
+      const reference = firestoreApi.doc(db, 'users', uid);
+      const snapshot = await firestoreApi.getDoc(reference);
+      if (snapshot.exists()) {
+        const existing = { id: snapshot.id, ...snapshot.data() } as UserProfile;
+        setProfile(existing);
+        return existing;
+      }
+    }
+    const timestamp = nowIso();
+    const created: UserProfile = {
+      id: uid,
+      displayName: 'ゲスト',
+      iconUrl: GUEST_ICON,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
+    if (db && firestoreApi) await firestoreApi.setDoc(firestoreApi.doc(db, 'users', uid), created);
+    else writeJson(KEYS.profile, created);
+    setProfile(created);
+    return created;
+  }, [localUid, profile, user]);
+
   const throttle = () => {
     if (Date.now() - lastMutation.current < 1800) throw new Error('連続操作を避け、少し待ってからお試しください。');
     lastMutation.current = Date.now();
@@ -263,7 +292,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   const addProduct = useCallback(async (draft: ProductDraft) => {
     throttle();
-    const current = requireProfile();
+    const current = await ensureProfile();
     const errors = validateProduct(draft.category, draft.name, draft.image, draft.recipe);
     if (errors.length) throw new Error(errors.join('\n'));
     const imageUrl = draft.image ? await uploadImage(draft.image, `products/${current.id}`) : '';
@@ -281,7 +310,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     } else {
       writeJson(KEYS.products, [{ id: makeId(), ...next }, ...products]);
     }
-  }, [products, requireProfile, uploadImage]);
+  }, [ensureProfile, products, uploadImage]);
 
   const updateProduct = useCallback(async (id: string, draft: ProductEditDraft, expectedUpdatedAt: string) => {
     requireProfile();
