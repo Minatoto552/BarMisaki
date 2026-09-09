@@ -32,6 +32,7 @@ it("コンパクト表示では画像DOMを作らず、画像表示の欠損画�
   rerender(
     <OrderProductCard product={product} mode="image" onChoose={onChoose} />,
   );
+  expect(screen.getByRole("button")).toHaveClass("visual-product-card");
   expect(screen.getByLabelText("商品画像なし")).toBeInTheDocument();
   rerender(
     <OrderProductCard

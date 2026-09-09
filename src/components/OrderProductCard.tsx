@@ -28,7 +28,7 @@ export const OrderProductCard = ({
   };
   return (
     <button
-      className={`pos-product-card ${mode === "compact" ? "compact-product-card" : ""} ${pressed ? "product-pressed" : ""}`}
+      className={`pos-product-card ${mode === "compact" ? "compact-product-card" : "visual-product-card"} ${pressed ? "product-pressed" : ""}`}
       onClick={choose}
       aria-label={`${product.name}${temperature ? "の温度を選択" : optional ? "をカスタマイズ" : "をカートに追加"}`}
     >

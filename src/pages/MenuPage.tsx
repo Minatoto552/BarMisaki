@@ -259,7 +259,7 @@ export const MenuPage = () => {
             <p role="status">商品を読み込んでいます…</p>
           ) : visible.length ? (
             <div
-              className={`pos-product-grid ${viewMode === "compact" ? "compact-product-grid" : "image-product-grid"}`}
+              className={`pos-product-grid ${viewMode === "compact" ? "compact-product-grid" : "visual-product-grid"}`}
             >
               {visible.map((product) => (
                 <OrderProductCard
