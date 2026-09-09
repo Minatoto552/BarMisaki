@@ -23,28 +23,33 @@ afterEach(() => {
   cleanup();
   vi.useRealTimers();
 });
-it("画像未登録や読込失敗はアイコンにし、常に小さい画像領域を表示する", () => {
+it("コンパクト表示では画像DOMを作らず、画像表示の欠損画像はアイコンにする", () => {
   const onChoose = vi.fn();
   const { container, rerender } = render(
-    <OrderProductCard product={product} onChoose={onChoose} />,
+    <OrderProductCard product={product} mode="compact" onChoose={onChoose} />,
+  );
+  expect(container.querySelector(".pos-product-image")).toBeNull();
+  rerender(
+    <OrderProductCard product={product} mode="image" onChoose={onChoose} />,
   );
   expect(screen.getByLabelText("商品画像なし")).toBeInTheDocument();
   rerender(
     <OrderProductCard
       product={{ ...product, imageUrl: "/broken.png" }}
+      mode="image"
       onChoose={onChoose}
     />,
   );
   fireEvent.error(container.querySelector("img")!);
   expect(screen.getByLabelText("商品画像なし")).toBeInTheDocument();
-  rerender(<OrderProductCard product={product} onChoose={onChoose} />);
+  rerender(<OrderProductCard product={product} mode="image" onChoose={onChoose} />);
   expect(container.querySelector(".pos-product-image")).not.toBeNull();
 });
 it("＋を押しても1回だけ追加し、強調表示を180ms後に解除する", () => {
   vi.useFakeTimers();
   const onChoose = vi.fn();
   const { container } = render(
-    <OrderProductCard product={product} onChoose={onChoose} />,
+    <OrderProductCard product={product} mode="compact" onChoose={onChoose} />,
   );
   fireEvent.click(container.querySelector(".product-add-icon")!);
   expect(onChoose).toHaveBeenCalledTimes(1);

@@ -1,5 +1,18 @@
-import { Check, Minus, Plus, Search, ShoppingBag } from "lucide-react";
-import { OrderProductCard } from "../components/OrderProductCard";
+import {
+  Check,
+  Flame,
+  LayoutGrid,
+  List,
+  Minus,
+  Plus,
+  Search,
+  ShoppingBag,
+  Snowflake,
+} from "lucide-react";
+import {
+  OrderProductCard,
+  type ProductViewMode,
+} from "../components/OrderProductCard";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Modal } from "../components/Modal";
@@ -8,6 +21,11 @@ import { useCart } from "../lib/cart-context";
 import { useData } from "../lib/data";
 import { builtInNormalCocktail } from "../lib/sample-data";
 import { filterMenuProducts } from "../lib/menu-search";
+import {
+  formatProductName,
+  isDrinkTemperature,
+  isTemperatureProduct,
+} from "../lib/order-options";
 import { validateOrderOptions, validateTableNumber } from "../lib/validation";
 import {
   categoryLabels,
@@ -25,6 +43,23 @@ export const MenuPage = () => {
   const [category, setCategory] = useState<ProductCategory | "all">("all");
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("default");
+  const [viewMode, setViewMode] = useState<ProductViewMode>(() => {
+    try {
+      return localStorage.getItem("barmisaki-product-view") === "image"
+        ? "image"
+        : "compact";
+    } catch {
+      return "compact";
+    }
+  });
+  const changeView = (mode: ProductViewMode) => {
+    setViewMode(mode);
+    try {
+      localStorage.setItem("barmisaki-product-view", mode);
+    } catch {
+      /* Private browsing may disable storage. */
+    }
+  };
   const [selected, setSelected] = useState<Product | null>(null);
   const [options, setOptions] = useState<OrderOptions>({});
   const [quantity, setQuantity] = useState(1);
@@ -81,7 +116,7 @@ export const MenuPage = () => {
   }, [allProducts, category, search, sort, orders]);
   const add = (product: Product, choices: OrderOptions = {}, amount = 1) => {
     cart.add(product, choices, amount);
-    setNotice(`${product.name} ×${amount} をカートに追加しました`);
+    setNotice(`${formatProductName(product.name, choices)} ×${amount} をカートに追加しました`);
   };
   const choose = (product: Product) => {
     if (!profile) {
@@ -90,7 +125,10 @@ export const MenuPage = () => {
       });
       return;
     }
-    if (product.category !== "normal_cocktail") {
+    if (
+      !isTemperatureProduct(product.name) &&
+      product.category !== "normal_cocktail"
+    ) {
       add(product);
       return;
     }
@@ -101,7 +139,11 @@ export const MenuPage = () => {
   };
   const configure = () => {
     if (!selected) return;
-    const next = validateOrderOptions(selected.category, options);
+    const next = isTemperatureProduct(selected.name)
+      ? isDrinkTemperature(options.temperature)
+        ? []
+        : ["ホットまたはアイスを選択してください。"]
+      : validateOrderOptions(selected.category, options);
     setErrors(next);
     if (next.length) return;
     add(selected, options, quantity);
@@ -189,16 +231,41 @@ export const MenuPage = () => {
           </div>
           <div className="catalog-caption">
             <span>{search ? "全カテゴリーの検索結果" : "メニュー"}</span>
-            <span>{visible.length}商品</span>
+            <div className="catalog-view-tools">
+              <span>{visible.length}商品</span>
+              <div
+                className="product-view-switch"
+                role="group"
+                aria-label="商品の表示方法"
+              >
+                <button
+                  aria-pressed={viewMode === "compact"}
+                  onClick={() => changeView("compact")}
+                >
+                  <List />
+                  コンパクト
+                </button>
+                <button
+                  aria-pressed={viewMode === "image"}
+                  onClick={() => changeView("image")}
+                >
+                  <LayoutGrid />
+                  画像
+                </button>
+              </div>
+            </div>
           </div>
           {!ready ? (
             <p role="status">商品を読み込んでいます…</p>
           ) : visible.length ? (
-            <div className="pos-product-grid visual-product-grid">
+            <div
+              className={`pos-product-grid ${viewMode === "compact" ? "compact-product-grid" : "image-product-grid"}`}
+            >
               {visible.map((product) => (
                 <OrderProductCard
                   key={product.id}
                   product={product}
+                  mode={viewMode}
                   onChoose={choose}
                 />
               ))}
@@ -249,54 +316,77 @@ export const MenuPage = () => {
       {selected && (
         <Modal title={selected.name} onClose={() => setSelected(null)} wide>
           <div className="customize-stack">
-            <p className="muted">
-              2色とオプションを選択してください。同じ色も選べます。
-            </p>
-            {(["color1", "color2"] as const).map((key, index) => (
-              <fieldset className="field-group" key={key}>
-                <legend>{index + 1}色目</legend>
-                <div className="color-grid">
-                  {cocktailColors.map((color) => (
+            {isTemperatureProduct(selected.name) ? (
+              <fieldset className="field-group">
+                <legend>温度を選択</legend>
+                <p className="muted">ホットまたはアイスを選択してください。</p>
+                <div className="temperature-grid">
+                  {(["hot", "iced"] as const).map((value) => (
                     <button
-                      aria-pressed={options[key] === color}
-                      className={`color-choice ${options[key] === color ? "selected" : ""}`}
-                      key={color}
-                      onClick={() =>
-                        setOptions((current) => ({ ...current, [key]: color }))
-                      }
+                      key={value}
+                      aria-pressed={options.temperature === value}
+                      className={options.temperature === value ? "selected" : ""}
+                      onClick={() => setOptions({ temperature: value })}
                     >
-                      <i className={`mini-color color-${color}`} />
-                      <span>{colorLabels[color]}</span>
-                      {options[key] === color && <Check />}
+                      {value === "hot" ? <Flame /> : <Snowflake />}
+                      <span>{value === "hot" ? "ホット" : "アイス"}</span>
+                      {options.temperature === value && <Check />}
                     </button>
                   ))}
                 </div>
               </fieldset>
-            ))}
-            <div className="binary-grid">
-              {(["carbonated", "aphrodisiac"] as const).map((key) => (
-                <fieldset className="field-group" key={key}>
-                  <legend>{key === "carbonated" ? "炭酸" : "媚薬"}</legend>
-                  <div className="segmented">
-                    {[true, false].map((value) => (
-                      <button
-                        key={String(value)}
-                        aria-pressed={options[key] === value}
-                        className={options[key] === value ? "selected" : ""}
-                        onClick={() =>
-                          setOptions((current) => ({
-                            ...current,
-                            [key]: value,
-                          }))
-                        }
-                      >
-                        {value ? "あり" : "なし"}
-                      </button>
-                    ))}
-                  </div>
-                </fieldset>
-              ))}
-            </div>
+            ) : (
+              <>
+                <p className="muted">
+                  2色とオプションを選択してください。同じ色も選べます。
+                </p>
+                {(["color1", "color2"] as const).map((key, index) => (
+                  <fieldset className="field-group" key={key}>
+                    <legend>{index + 1}色目</legend>
+                    <div className="color-grid">
+                      {cocktailColors.map((color) => (
+                        <button
+                          aria-pressed={options[key] === color}
+                          className={`color-choice ${options[key] === color ? "selected" : ""}`}
+                          key={color}
+                          onClick={() =>
+                            setOptions((current) => ({ ...current, [key]: color }))
+                          }
+                        >
+                          <i className={`mini-color color-${color}`} />
+                          <span>{colorLabels[color]}</span>
+                          {options[key] === color && <Check />}
+                        </button>
+                      ))}
+                    </div>
+                  </fieldset>
+                ))}
+                <div className="binary-grid">
+                  {(["carbonated", "aphrodisiac"] as const).map((key) => (
+                    <fieldset className="field-group" key={key}>
+                      <legend>{key === "carbonated" ? "炭酸" : "媚薬"}</legend>
+                      <div className="segmented">
+                        {[true, false].map((value) => (
+                          <button
+                            key={String(value)}
+                            aria-pressed={options[key] === value}
+                            className={options[key] === value ? "selected" : ""}
+                            onClick={() =>
+                              setOptions((current) => ({
+                                ...current,
+                                [key]: value,
+                              }))
+                            }
+                          >
+                            {value ? "あり" : "なし"}
+                          </button>
+                        ))}
+                      </div>
+                    </fieldset>
+                  ))}
+                </div>
+              </>
+            )}
             <div className="cart-total">
               <span>注文数</span>
               <div className="quantity-stepper">
@@ -345,7 +435,7 @@ export const MenuPage = () => {
             {cart.items.map((item) => (
               <div key={item.id}>
                 <div>
-                  <strong>{item.product.name}</strong>
+                  <strong>{formatProductName(item.product.name, item.options)}</strong>
                   <OptionSummary options={item.options} />
                 </div>
                 <b>×{item.quantity}</b>

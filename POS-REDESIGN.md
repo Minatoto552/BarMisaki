@@ -1,5 +1,12 @@
 # BarMisaki POS UI redesign
 
+## Temperature options (2026-09-09)
+
+- Only products named `抹茶ラテ` and `いちごみるく` open a hot/iced selector before they enter the cart. Every other non-normal-cocktail product still uses direct add.
+- Temperature is part of the cart option identity, so repeated items at the same temperature merge while hot and iced remain separate lines.
+- Orders keep the existing Firestore shape and rules: the temperature label is included in the existing product-name snapshot, for example `抹茶ラテ（ホット）`. No migration or Firebase rule change is required, and grouped order tickets keep the two temperatures separate.
+- The compact-first/image-toggle implementation has been restored. The chosen view is saved locally and switching it does not remount the page-level search, category, sort, or shared cart state.
+
 ## Product view follow-up (2026-09-04)
 
 - Default compact mode (no image DOM), optional image mode with 4:3 cropped photos. Saved per browser under `barmisaki-product-view`.

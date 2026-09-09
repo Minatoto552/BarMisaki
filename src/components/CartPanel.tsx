@@ -2,6 +2,7 @@ import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { useCart } from "../lib/cart-context";
 import { TABLE_NUMBERS } from "../lib/table-numbers";
 import { colorLabels, type OrderOptions } from "../types";
+import { formatProductName } from "../lib/order-options";
 export const OptionSummary = ({ options }: { options: OrderOptions }) =>
   options.color1 && options.color2 ? (
     <span className="option-summary">
@@ -31,11 +32,11 @@ export const CartPanel = ({ onReview }: { onReview: () => void }) => {
           items.map((item) => (
             <article className="cart-line" key={item.id}>
               <div className="cart-line-heading">
-                <strong>{item.product.name}</strong>
+                <strong>{formatProductName(item.product.name, item.options)}</strong>
                 <button
                   className="icon-button muted"
                   onClick={() => change(item.id, 0)}
-                  aria-label={`${item.product.name}をカートから削除`}
+                  aria-label={`${formatProductName(item.product.name, item.options)}をカートから削除`}
                 >
                   <Trash2 />
                 </button>
@@ -43,11 +44,11 @@ export const CartPanel = ({ onReview }: { onReview: () => void }) => {
               <OptionSummary options={item.options} />
               <div
                 className="quantity-stepper"
-                aria-label={`${item.product.name}の個数`}
+                aria-label={`${formatProductName(item.product.name, item.options)}の個数`}
               >
                 <button
                   onClick={() => change(item.id, item.quantity - 1)}
-                  aria-label={`${item.product.name}を1個減らす`}
+                  aria-label={`${formatProductName(item.product.name, item.options)}を1個減らす`}
                 >
                   <Minus />
                 </button>
@@ -55,7 +56,7 @@ export const CartPanel = ({ onReview }: { onReview: () => void }) => {
                 <button
                   disabled={item.quantity >= 99}
                   onClick={() => change(item.id, item.quantity + 1)}
-                  aria-label={`${item.product.name}を1個増やす`}
+                  aria-label={`${formatProductName(item.product.name, item.options)}を1個増やす`}
                 >
                   <Plus />
                 </button>

@@ -3,6 +3,7 @@ export const cocktailColors = ['red', 'blue', 'green', 'white', 'black'] as cons
 export const orderStatuses = ['pending', 'preparing', 'completed'] as const;
 export const emergencyKinds = ['help', 'medical', 'trouble', 'other'] as const;
 export const announcementKinds = ['urgent', 'notice'] as const;
+export const drinkTemperatures = ['hot', 'iced'] as const;
 
 export type ProductCategory = (typeof productCategories)[number];
 export type CocktailColor = (typeof cocktailColors)[number];
@@ -10,6 +11,7 @@ export type OrderStatus = (typeof orderStatuses)[number];
 export type EmergencyKind = (typeof emergencyKinds)[number];
 export type EmergencyStatus = 'active' | 'acknowledged' | 'resolved';
 export type AnnouncementKind = (typeof announcementKinds)[number];
+export type DrinkTemperature = (typeof drinkTemperatures)[number];
 
 export interface UserProfile {
   id: string;
@@ -114,6 +116,7 @@ export interface OrderOptions {
   color2?: CocktailColor;
   carbonated?: boolean;
   aphrodisiac?: boolean;
+  temperature?: DrinkTemperature;
 }
 
 export interface CartItem {
@@ -154,4 +157,9 @@ export const emergencyKindLabels: Record<EmergencyKind, string> = {
 export const announcementKindLabels: Record<AnnouncementKind, string> = {
   urgent: '緊急',
   notice: '連絡',
+};
+
+export const drinkTemperatureLabels: Record<DrinkTemperature, string> = {
+  hot: 'ホット',
+  iced: 'アイス',
 };

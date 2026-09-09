@@ -33,6 +33,7 @@ import type {
 } from '../types';
 import { getFirebaseServices, runtimeMode } from './firebase';
 import { sampleProducts } from './sample-data';
+import { formatProductName } from './order-options';
 import { validateProduct, validateTableNumber } from './validation';
 
 interface ProductDraft {
@@ -445,7 +446,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const nextOrders = items.flatMap(({ product, options, quantity }) => Array.from({ length: quantity }, (): OrderWithoutId => {
       const base = {
         receiptNumber, cartId, tableNumber: tableNumber.trim(),
-        productId: product.id, productName: product.name, productImageUrl: product.imageUrl,
+        productId: product.id, productName: formatProductName(product.name, options), productImageUrl: product.imageUrl,
         orderedBy: current.id, ordererName: current.displayName,
         status: 'pending' as const, createdAt: timestamp, updatedAt: timestamp,
       };

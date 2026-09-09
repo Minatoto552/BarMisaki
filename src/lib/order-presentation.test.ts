@@ -26,6 +26,17 @@ describe("注文票表示", () => {
     ]);
     expect(lines.map((l) => l.quantity)).toEqual([2, 1]);
   });
+  it("同じ商品IDでもホットとアイスを別の商品行にする", () => {
+    const lines = summarizeOrderItems([
+      { ...base, id: "hot-1", productName: "抹茶ラテ（ホット）" },
+      { ...base, id: "iced", productName: "抹茶ラテ（アイス）" },
+      { ...base, id: "hot-2", productName: "抹茶ラテ（ホット）" },
+    ]);
+    expect(lines.map((line) => [line.order.productName, line.quantity])).toEqual([
+      ["抹茶ラテ（ホット）", 2],
+      ["抹茶ラテ（アイス）", 1],
+    ]);
+  });
   it("5分・10分の境界だけ警告し、30秒以内はNEW", () => {
     const start = Date.parse(base.createdAt);
     expect(getOrderAge(base.createdAt, start + 20_000).isNew).toBe(true);

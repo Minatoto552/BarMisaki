@@ -36,4 +36,12 @@ describe('cart quantity', () => {
     const second = addCartItem(first, product, { ...options, carbonated: false });
     expect(second).toHaveLength(2);
   });
+
+  it('同じ商品でもホットとアイスは別行、同じ温度は数量にまとめる', () => {
+    const hot = addCartItem([], product, { temperature: 'hot' });
+    const iced = addCartItem(hot, product, { temperature: 'iced' });
+    const hotAgain = addCartItem(iced, product, { temperature: 'hot' });
+    expect(hotAgain).toHaveLength(2);
+    expect(hotAgain.map((item) => item.quantity)).toEqual([2, 1]);
+  });
 });

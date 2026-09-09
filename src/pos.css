@@ -628,6 +628,35 @@ select:focus {
   bottom: 0;
   align-items: center;
 }
+.temperature-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+.temperature-grid button {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 64px;
+  padding: 14px 18px;
+  border-color: var(--border);
+  background: #18181b;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 700;
+  text-align: left;
+}
+.temperature-grid button.selected {
+  border-color: #a78bfa;
+  background: #302044;
+  color: #f5f3ff;
+}
+.temperature-grid button svg {
+  width: 20px;
+  height: 20px;
+}
 @media (min-width: 2100px) {
   .pos-product-grid.compact-product-grid {
     grid-template-columns: repeat(5, minmax(0, 1fr));

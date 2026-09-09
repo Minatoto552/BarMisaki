@@ -27,6 +27,20 @@ vi.mock("../lib/data", () => ({
         imageUrl: "/x.png",
         isAvailable: true,
       },
+      {
+        id: "matcha-latte",
+        name: "抹茶ラテ",
+        category: "juice",
+        imageUrl: "/matcha.png",
+        isAvailable: true,
+      },
+      {
+        id: "strawberry-milk",
+        name: "いちごみるく",
+        category: "juice",
+        imageUrl: "/strawberry.png",
+        isAvailable: true,
+      },
     ],
   }),
 }));
@@ -45,10 +59,10 @@ beforeEach(() => {
   state.placeCart.mockResolvedValue("12345");
 });
 describe("POS注文フロー", () => {
-  it("小さい商品画像を表示し、検索・カテゴリー・並び順・カートを維持する", () => {
+  it("コンパクトを標準にし、画像切替後も検索・カテゴリー・並び順・カートを維持する", () => {
     open();
     const catalog = screen.getByRole("region", { name: "商品一覧" });
-    expect(catalog.querySelector('img[src="/x.png"]')).not.toBeNull();
+    expect(catalog.querySelector('img[src="/x.png"]')).toBeNull();
     fireEvent.click(
       screen
         .getByRole("button", { name: "ソーダをカートに追加" })
@@ -61,6 +75,8 @@ describe("POS注文フロー", () => {
     fireEvent.change(screen.getByLabelText("並び順"), {
       target: { value: "name" },
     });
+    fireEvent.click(screen.getByRole("button", { name: "画像" }));
+    expect(catalog.querySelector('img[src="/x.png"]')).not.toBeNull();
     expect(screen.getByRole("textbox", { name: "商品を検索" })).toHaveValue(
       "ソーダ",
     );
@@ -69,6 +85,10 @@ describe("POS注文フロー", () => {
       "true",
     );
     expect(screen.getByLabelText("並び順")).toHaveValue("name");
+    expect(screen.getByRole("button", { name: "画像" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
     expect(
       screen.getByRole("region", { name: "現在の注文内容" }),
     ).toHaveTextContent("ソーダ");
@@ -144,5 +164,59 @@ describe("POS注文フロー", () => {
     fireEvent.click(screen.getByRole("button", { name: "注文を送信" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("接続エラー");
     expect(screen.getByRole("dialog")).toHaveTextContent("ソーダ");
+  });
+
+  it("抹茶ラテは温度選択後に追加し、温度別に分けて同じ温度をまとめる", async () => {
+    open();
+    const addMatcha = (temperature: "ホット" | "アイス") => {
+      fireEvent.click(
+        screen.getByRole("button", { name: "抹茶ラテの温度を選択" }),
+      );
+      const dialog = within(screen.getByRole("dialog"));
+      fireEvent.click(dialog.getByRole("button", { name: temperature }));
+      fireEvent.click(dialog.getByRole("button", { name: "カートに追加" }));
+    };
+    fireEvent.click(
+      screen.getByRole("button", { name: "抹茶ラテの温度を選択" }),
+    );
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "カートに追加",
+      }),
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "ホットまたはアイス",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "閉じる" }));
+    addMatcha("ホット");
+    addMatcha("アイス");
+    addMatcha("ホット");
+    const cart = within(screen.getByRole("region", { name: "現在の注文内容" }));
+    expect(cart.getByText("抹茶ラテ（ホット）")).toBeInTheDocument();
+    expect(cart.getByText("抹茶ラテ（アイス）")).toBeInTheDocument();
+    expect(
+      cart.getByRole("button", { name: "抹茶ラテ（ホット）を1個減らす" })
+        .parentElement,
+    ).toHaveTextContent("2");
+    fireEvent.change(cart.getByLabelText(/テーブル番号/), {
+      target: { value: "1" },
+    });
+    fireEvent.click(cart.getByRole("button", { name: "注文内容を確認" }));
+    fireEvent.click(screen.getByRole("button", { name: "注文を送信" }));
+    await waitFor(() =>
+      expect(state.placeCart).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            options: { temperature: "hot" },
+            quantity: 2,
+          }),
+          expect.objectContaining({
+            options: { temperature: "iced" },
+            quantity: 1,
+          }),
+        ]),
+        "1",
+      ),
+    );
   });
 });

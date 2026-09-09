@@ -4,7 +4,8 @@ const sameOptions = (left: OrderOptions, right: OrderOptions) =>
   left.color1 === right.color1
   && left.color2 === right.color2
   && left.carbonated === right.carbonated
-  && left.aphrodisiac === right.aphrodisiac;
+  && left.aphrodisiac === right.aphrodisiac
+  && left.temperature === right.temperature;
 
 export const addCartItem = (cart: CartItem[], product: Product, options: OrderOptions, quantity = 1): CartItem[] => {
   if (quantity <= 0) return cart;
