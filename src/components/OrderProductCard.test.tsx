@@ -29,6 +29,8 @@ it("コンパクト表示では画像DOMを作らず、画像表示の欠損画�
     <OrderProductCard product={product} mode="compact" onChoose={onChoose} />,
   );
   expect(container.querySelector(".pos-product-image")).toBeNull();
+  expect(screen.getByRole("button")).toHaveClass("compact-product-card");
+  expect(screen.getByText("ジュース")).toBeInTheDocument();
   rerender(
     <OrderProductCard product={product} mode="image" onChoose={onChoose} />,
   );

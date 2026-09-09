@@ -63,6 +63,7 @@ describe("POS注文フロー", () => {
     open();
     const catalog = screen.getByRole("region", { name: "商品一覧" });
     expect(catalog.querySelector('img[src="/x.png"]')).toBeNull();
+    expect(catalog.querySelector(".compact-product-grid")).not.toBeNull();
     fireEvent.click(
       screen
         .getByRole("button", { name: "ソーダをカートに追加" })

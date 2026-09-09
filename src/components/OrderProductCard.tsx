@@ -20,6 +20,13 @@ export const OrderProductCard = ({
   useEffect(() => () => clearTimeout(timer.current), []);
   const temperature = isTemperatureProduct(product.name);
   const optional = temperature || product.category === "normal_cocktail";
+  const compactMeta = temperature
+    ? "ジュース ・ Hot/Ice"
+    : product.category === "normal_cocktail"
+      ? "ノーマル ・ オプションあり"
+      : product.category === "original_cocktail"
+        ? "オリジナル"
+        : categoryLabels[product.category];
   const choose = () => {
     clearTimeout(timer.current);
     setPressed(true);
@@ -51,8 +58,18 @@ export const OrderProductCard = ({
       )}
       <div className="pos-product-copy">
         <strong>{product.name}</strong>
-        <small>{categoryLabels[product.category]}</small>
-        {optional && <span>{temperature ? "ホット / アイス" : "オプションを選択"}</span>}
+        {mode === "compact" ? (
+          <small>{compactMeta}</small>
+        ) : (
+          <>
+            <small>{categoryLabels[product.category]}</small>
+            {optional && (
+              <span>
+                {temperature ? "ホット / アイス" : "オプションを選択"}
+              </span>
+            )}
+          </>
+        )}
       </div>
       <span className="product-add-icon" aria-hidden="true">
         <Plus />
