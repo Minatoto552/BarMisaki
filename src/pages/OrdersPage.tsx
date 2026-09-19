@@ -25,9 +25,11 @@ import {
   orderStatuses,
   type Emergency,
   type Order,
+  type OrderInstance,
   type OrderStatus,
 } from "../types";
 type StatusFilter = "all" | OrderStatus;
+type InstanceFilter = OrderInstance | "legacy";
 const time = (value: string) =>
   new Date(value).toLocaleTimeString("ja-JP", {
     hour: "2-digit",
@@ -45,6 +47,8 @@ export const OrdersPage = () => {
     runtimeMode,
     error: connectionError,
   } = useData();
+  const [instanceFilter, setInstanceFilter] =
+    useState<InstanceFilter>("first");
   const [filter, setFilter] = useState<StatusFilter>("all");
   const [recipe, setRecipe] = useState<Order | null>(null);
   const [detail, setDetail] = useState<Emergency | null>(null);
@@ -67,22 +71,36 @@ export const OrdersPage = () => {
       ),
     [orders, isStaff, uid, dayStart],
   );
+  const instanceGroups = useMemo(
+    () =>
+      groups.filter((group) =>
+        instanceFilter === "legacy"
+          ? !group.instance
+          : group.instance === instanceFilter,
+      ),
+    [groups, instanceFilter],
+  );
   const visible = useMemo(
     () =>
-      groups
+      instanceGroups
         .filter((g) => matchesOrderGroupFilter(g.status, filter))
         .sort((a, b) =>
           filter === "completed"
             ? b.createdAt.localeCompare(a.createdAt)
             : a.createdAt.localeCompare(b.createdAt),
         ),
-    [groups, filter],
+    [instanceGroups, filter],
   );
   const counts = {
-    all: groups.filter((g) => g.status !== "completed").length,
-    pending: groups.filter((g) => g.status === "pending").length,
-    preparing: groups.filter((g) => g.status === "preparing").length,
-    completed: groups.filter((g) => g.status === "completed").length,
+    all: instanceGroups.filter((g) => g.status !== "completed").length,
+    pending: instanceGroups.filter((g) => g.status === "pending").length,
+    preparing: instanceGroups.filter((g) => g.status === "preparing").length,
+    completed: instanceGroups.filter((g) => g.status === "completed").length,
+  };
+  const instanceCounts = {
+    first: groups.filter((group) => group.instance === "first").length,
+    second: groups.filter((group) => group.instance === "second").length,
+    legacy: groups.filter((group) => !group.instance).length,
   };
   const active = emergencies.filter((e) => e.status !== "resolved");
   const change = async (group: OrderGroup, status: OrderStatus) => {
@@ -136,6 +154,35 @@ export const OrdersPage = () => {
                 : "LIVE"}
         </span>
       </header>
+      <div
+        className="instance-switcher"
+        role="tablist"
+        aria-label="表示するインスタンス"
+      >
+        {(["first", "second"] as const).map((instance) => (
+          <button
+            key={instance}
+            type="button"
+            role="tab"
+            aria-selected={instanceFilter === instance}
+            onClick={() => setInstanceFilter(instance)}
+          >
+            <span>{orderInstanceLabels[instance]}</span>
+            <b>{instanceCounts[instance]}</b>
+          </button>
+        ))}
+        {instanceCounts.legacy > 0 && (
+          <button
+            type="button"
+            role="tab"
+            aria-selected={instanceFilter === "legacy"}
+            onClick={() => setInstanceFilter("legacy")}
+          >
+            <span>未設定（旧注文）</span>
+            <b>{instanceCounts.legacy}</b>
+          </button>
+        )}
+      </div>
       <div className="order-summary">
         {orderStatuses.map((status) => (
           <button
