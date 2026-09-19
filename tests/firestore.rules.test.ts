@@ -20,7 +20,7 @@ const profile = (uid: string) => ({
   updatedAt: timestamp,
 });
 
-const order = (uid: string, tableNumber = '18') => ({
+const order = (uid: string, tableNumber = '8') => ({
   receiptNumber: '12345',
   cartId: 'cart-1',
   instance: 'first',
@@ -74,15 +74,15 @@ describe('Firestore Security Rules', () => {
     await assertSucceeds(addDoc(collection(alice, 'orders'), order('alice')));
   });
 
-  it('テーブル番号は1〜18だけを許可する', async () => {
+  it('テーブル番号は1〜8だけを許可する', async () => {
     await environment.withSecurityRulesDisabled(async (context) => {
       await setDoc(doc(context.firestore(), 'users/alice'), profile('alice'));
     });
     const alice = environment.authenticatedContext('alice').firestore();
     await assertSucceeds(addDoc(collection(alice, 'orders'), order('alice', '1')));
-    await assertSucceeds(addDoc(collection(alice, 'orders'), order('alice', '18')));
+    await assertSucceeds(addDoc(collection(alice, 'orders'), order('alice', '8')));
     await assertFails(addDoc(collection(alice, 'orders'), order('alice', '0')));
-    await assertFails(addDoc(collection(alice, 'orders'), order('alice', '19')));
+    await assertFails(addDoc(collection(alice, 'orders'), order('alice', '9')));
     await assertFails(addDoc(collection(alice, 'orders'), order('alice', 'A-3')));
   });
 

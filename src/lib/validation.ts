@@ -52,7 +52,7 @@ export const validateOrderOptions = (category: ProductCategory, options: OrderOp
 export const validateTableNumber = (value: string): string | null => {
   const normalized = value.trim();
   if (!normalized) return 'テーブル番号を選択してください。';
-  if (!isTableNumber(normalized)) return 'テーブル番号は1〜18から選択してください。';
+  if (!isTableNumber(normalized)) return 'テーブル番号は1〜8から選択してください。';
   return null;
 };
 

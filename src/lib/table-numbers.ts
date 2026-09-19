@@ -1,4 +1,4 @@
-export const TABLE_NUMBERS = Array.from({ length: 18 }, (_, index) => String(index + 1));
+export const TABLE_NUMBERS = Array.from({ length: 8 }, (_, index) => String(index + 1));
 
 const tableNumberSet = new Set(TABLE_NUMBERS);
 

@@ -97,7 +97,7 @@ describe("POS注文フロー", () => {
       screen.getByRole("button", { name: "ソーダを1個減らす" }).parentElement,
     ).toHaveTextContent("1");
   });
-  it("カードから即時追加し、確認までは送信しない。18番・数量2を送る", async () => {
+  it("カードから即時追加し、確認までは送信しない。8番・数量2を送る", async () => {
     open();
     fireEvent.click(
       screen.getByRole("button", { name: "ソーダをカートに追加" }),
@@ -108,9 +108,9 @@ describe("POS注文フロー", () => {
       target: { value: "second" },
     });
     fireEvent.change(cart.getByLabelText(/テーブル番号/), {
-      target: { value: "18" },
+      target: { value: "8" },
     });
-    expect(cart.getAllByRole("option")).toHaveLength(22);
+    expect(cart.getAllByRole("option")).toHaveLength(12);
     fireEvent.click(cart.getByRole("button", { name: "注文内容を確認" }));
     expect(state.placeCart).not.toHaveBeenCalled();
     expect(screen.getByRole("dialog")).toHaveTextContent("×2");
@@ -119,7 +119,7 @@ describe("POS注文フロー", () => {
       expect(state.placeCart).toHaveBeenCalledWith(
         [expect.objectContaining({ quantity: 2 })],
         "second",
-        "18",
+        "8",
       ),
     );
     expect(await screen.findByText("#12345")).toBeInTheDocument();

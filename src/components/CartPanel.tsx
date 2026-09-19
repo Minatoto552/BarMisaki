@@ -110,7 +110,7 @@ export const CartPanel = ({ onReview }: { onReview: () => void }) => {
             テーブル番号 <b>必須</b>
           </span>
           <select value={table} onChange={(e) => setTable(e.target.value)}>
-            <option value="">1〜18から選択</option>
+            <option value="">1〜8から選択</option>
             {TABLE_NUMBERS.map((number) => (
               <option value={number} key={number}>
                 テーブル {number}

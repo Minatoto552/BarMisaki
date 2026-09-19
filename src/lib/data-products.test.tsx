@@ -44,12 +44,12 @@ describe('商品データの更新・削除', () => {
     expect(result.current.profile).toMatchObject({ displayName: '新しい名前', iconUrl: '/avatar.png', createdAt: 'created' });
   });
 
-  it('注文のテーブル番号を1〜18に制限する', async () => {
+  it('注文のテーブル番号を1〜8に制限する', async () => {
     const { result } = renderHook(useData, { wrapper: DataProvider });
     const item: CartItem = { id: 'cart-item', product, options: {}, quantity: 1 };
-    await expect(result.current.placeCart([item], 'first', '19')).rejects.toThrow('1〜18');
-    await act(() => result.current.placeCart([item], 'second', '18'));
-    expect(result.current.orders[0]).toMatchObject({ instance: 'second', tableNumber: '18', productName: product.name });
+    await expect(result.current.placeCart([item], 'first', '9')).rejects.toThrow('1〜8');
+    await act(() => result.current.placeCart([item], 'second', '8'));
+    expect(result.current.orders[0]).toMatchObject({ instance: 'second', tableNumber: '8', productName: product.name });
   });
 
   it('画像と登録者を維持し、別カテゴリーへ変更したらレシピを除く', async () => {
