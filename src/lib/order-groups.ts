@@ -1,10 +1,11 @@
-import type { Order, OrderStatus } from '../types';
+import type { Order, OrderInstance, OrderStatus } from '../types';
 
 export interface OrderGroup {
   id: string;
   orders: Order[];
   receiptNumber: string;
   tableNumber: string;
+  instance?: OrderInstance;
   ordererName: string;
   createdAt: string;
   status: OrderStatus;
@@ -37,6 +38,7 @@ export const groupOrdersByCart = (orders: Order[]): OrderGroup[] => {
       orders: sortedOrders,
       receiptNumber: first.receiptNumber,
       tableNumber: first.tableNumber,
+      instance: first.instance,
       ordererName: first.ordererName,
       createdAt: first.createdAt,
       status: getOrderGroupStatus(sortedOrders),

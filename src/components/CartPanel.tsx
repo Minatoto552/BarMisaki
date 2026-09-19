@@ -1,7 +1,13 @@
 import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { useCart } from "../lib/cart-context";
 import { TABLE_NUMBERS } from "../lib/table-numbers";
-import { colorLabels, type OrderOptions } from "../types";
+import {
+  colorLabels,
+  orderInstanceLabels,
+  orderInstances,
+  type OrderInstance,
+  type OrderOptions,
+} from "../types";
 import { formatProductName } from "../lib/order-options";
 export const OptionSummary = ({ options }: { options: OrderOptions }) =>
   options.color1 && options.color2 ? (
@@ -15,7 +21,15 @@ export const OptionSummary = ({ options }: { options: OrderOptions }) =>
     </span>
   ) : null;
 export const CartPanel = ({ onReview }: { onReview: () => void }) => {
-  const { items, table, setTable, quantity, change } = useCart();
+  const {
+    items,
+    table,
+    instance,
+    setTable,
+    setInstance,
+    quantity,
+    change,
+  } = useCart();
   return (
     <section className="cart-panel" aria-label="現在の注文内容">
       <header>
@@ -75,6 +89,24 @@ export const CartPanel = ({ onReview }: { onReview: () => void }) => {
       <footer>
         <label className="field">
           <span>
+            インスタンス <b>必須</b>
+          </span>
+          <select
+            value={instance}
+            onChange={(e) =>
+              setInstance(e.target.value as OrderInstance | "")
+            }
+          >
+            <option value="">インスタンスを選択</option>
+            {orderInstances.map((value) => (
+              <option value={value} key={value}>
+                {orderInstanceLabels[value]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="field">
+          <span>
             テーブル番号 <b>必須</b>
           </span>
           <select value={table} onChange={(e) => setTable(e.target.value)}>
@@ -92,7 +124,7 @@ export const CartPanel = ({ onReview }: { onReview: () => void }) => {
         </div>
         <button
           className="primary-button"
-          disabled={!quantity}
+          disabled={!quantity || !instance}
           onClick={onReview}
         >
           注文内容を確認

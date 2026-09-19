@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { validateDisplayName, validateOrderOptions, validateProduct, validateTableNumber } from './validation';
+import { validateDisplayName, validateOrderInstance, validateOrderOptions, validateProduct, validateTableNumber } from './validation';
 
 const image = new File(['image'], 'drink.png', { type: 'image/png' });
 
@@ -60,5 +60,14 @@ describe('テーブル番号', () => {
     expect(validateTableNumber('0')).toBeTruthy();
     expect(validateTableNumber('19')).toBeTruthy();
     expect(validateTableNumber('A-1')).toBeTruthy();
+  });
+});
+
+describe('注文インスタンス', () => {
+  it('第一・第二だけを許可する', () => {
+    expect(validateOrderInstance('first')).toBe(true);
+    expect(validateOrderInstance('second')).toBe(true);
+    expect(validateOrderInstance('')).toBe(false);
+    expect(validateOrderInstance('third')).toBe(false);
   });
 });

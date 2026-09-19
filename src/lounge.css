@@ -715,13 +715,13 @@ textarea::placeholder {
   scrollbar-color: #5d456f #100c16;
 }
 .order-table {
-  min-width: 960px;
+  min-width: 1080px;
 }
 .order-table-head,
 .order-catalog-row {
   display: grid;
   grid-template-columns:
-    minmax(82px, 0.75fr) minmax(280px, 2.8fr) minmax(70px, 0.7fr)
+    minmax(82px, 0.75fr) minmax(260px, 2.6fr) minmax(105px, 0.9fr) minmax(70px, 0.7fr)
     minmax(90px, 0.9fr) minmax(65px, 0.65fr) minmax(72px, 0.7fr)
     minmax(78px, 0.75fr) minmax(108px, 0.95fr);
   align-items: stretch;
@@ -1300,6 +1300,11 @@ textarea::placeholder {
   .pos-product-grid.compact-product-grid {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+.instance-cell {
+  color: #e2d4eb;
+  font-size: 11px;
+  line-height: 1.45;
 }
 @media (max-width: 800px) {
   .page-heading h1 {

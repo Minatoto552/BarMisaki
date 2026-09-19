@@ -2,6 +2,7 @@ import { Minus, Plus } from 'lucide-react';
 import { useState } from 'react';
 
 import type { OriginalCocktailOrder } from '../types';
+import { orderInstanceLabels } from '../types';
 import { Modal } from './Modal';
 
 export const RecipeViewer = ({ order, onClose }: { order: OriginalCocktailOrder; onClose: () => void }) => {
@@ -10,7 +11,7 @@ export const RecipeViewer = ({ order, onClose }: { order: OriginalCocktailOrder;
   return <Modal title={`${order.productName}のレシピ`} onClose={onClose} fullScreen>
     <div className="recipe-reader">
       <div className="recipe-reader-toolbar">
-        <p>TABLE {order.tableNumber} <span>／ 受付番号 #{order.receiptNumber}</span></p>
+        <p>{order.instance ? orderInstanceLabels[order.instance] : 'インスタンス未設定'}・TABLE {order.tableNumber} <span>／ 受付番号 #{order.receiptNumber}</span></p>
         <div className="recipe-font-controls" role="group" aria-label="レシピの文字サイズ">
           <button type="button" aria-label="レシピの文字を小さく" disabled={fontSize <= 20} onClick={() => setFontSize((size) => size - 2)}><Minus /></button>
           <output aria-live="polite">文字 {fontSize}px</output>

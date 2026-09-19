@@ -104,10 +104,13 @@ describe("POS注文フロー", () => {
     );
     const cart = within(screen.getByRole("region", { name: "現在の注文内容" }));
     fireEvent.click(cart.getByRole("button", { name: "ソーダを1個増やす" }));
+    fireEvent.change(cart.getByLabelText(/インスタンス/), {
+      target: { value: "second" },
+    });
     fireEvent.change(cart.getByLabelText(/テーブル番号/), {
       target: { value: "18" },
     });
-    expect(cart.getAllByRole("option")).toHaveLength(19);
+    expect(cart.getAllByRole("option")).toHaveLength(22);
     fireEvent.click(cart.getByRole("button", { name: "注文内容を確認" }));
     expect(state.placeCart).not.toHaveBeenCalled();
     expect(screen.getByRole("dialog")).toHaveTextContent("×2");
@@ -115,6 +118,7 @@ describe("POS注文フロー", () => {
     await waitFor(() =>
       expect(state.placeCart).toHaveBeenCalledWith(
         [expect.objectContaining({ quantity: 2 })],
+        "second",
         "18",
       ),
     );
@@ -125,7 +129,12 @@ describe("POS注文フロー", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "ソーダをカートに追加" }),
     );
-    fireEvent.click(screen.getByRole("button", { name: "注文内容を確認" }));
+    const cart = within(screen.getByRole("region", { name: "現在の注文内容" }));
+    expect(cart.getByRole("button", { name: "注文内容を確認" })).toBeDisabled();
+    fireEvent.change(cart.getByLabelText(/インスタンス/), {
+      target: { value: "first" },
+    });
+    fireEvent.click(cart.getByRole("button", { name: "注文内容を確認" }));
     expect(screen.getByRole("button", { name: "注文を送信" })).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: "閉じる" }));
     fireEvent.click(screen.getByRole("button", { name: "ソーダを1個減らす" }));
@@ -160,6 +169,9 @@ describe("POS注文フロー", () => {
     );
     fireEvent.change(screen.getByLabelText(/テーブル番号/), {
       target: { value: "1" },
+    });
+    fireEvent.change(screen.getByLabelText(/インスタンス/), {
+      target: { value: "first" },
     });
     fireEvent.click(screen.getByRole("button", { name: "注文内容を確認" }));
     fireEvent.click(screen.getByRole("button", { name: "注文を送信" }));
@@ -202,6 +214,9 @@ describe("POS注文フロー", () => {
     fireEvent.change(cart.getByLabelText(/テーブル番号/), {
       target: { value: "1" },
     });
+    fireEvent.change(cart.getByLabelText(/インスタンス/), {
+      target: { value: "first" },
+    });
     fireEvent.click(cart.getByRole("button", { name: "注文内容を確認" }));
     fireEvent.click(screen.getByRole("button", { name: "注文を送信" }));
     await waitFor(() =>
@@ -216,6 +231,7 @@ describe("POS注文フロー", () => {
             quantity: 1,
           }),
         ]),
+        "first",
         "1",
       ),
     );

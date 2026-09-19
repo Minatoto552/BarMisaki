@@ -15,6 +15,7 @@ import type {
   EmergencyKind,
   EmergencyStatus,
   Order,
+  OrderInstance,
   OrderStatus,
   Product,
   ProductCategory,
@@ -34,7 +35,7 @@ import type {
 import { getFirebaseServices, runtimeMode } from './firebase';
 import { sampleProducts } from './sample-data';
 import { formatProductName } from './order-options';
-import { validateProduct, validateTableNumber } from './validation';
+import { validateOrderInstance, validateProduct, validateTableNumber } from './validation';
 
 interface ProductDraft {
   category: ProductCategory;
@@ -62,13 +63,13 @@ interface DataContextValue {
   announcements: Announcement[];
   isStaff: boolean;
   runtimeMode: typeof runtimeMode;
-  saveProfile: (displayName: string, image: File | null) => Promise<void>;
+  saveProfile: (displayName: string) => Promise<void>;
   restoreProfile: (source: UserProfile) => Promise<void>;
   addProduct: (draft: ProductDraft) => Promise<void>;
   updateProduct: (id: string, draft: ProductEditDraft, expectedUpdatedAt: string) => Promise<void>;
   deleteProduct: (id: string, expectedUpdatedAt: string) => Promise<void>;
   duplicateProduct: (id: string, draft: ProductEditDraft, expectedUpdatedAt: string) => Promise<void>;
-  placeCart: (items: CartItem[], tableNumber: string) => Promise<string>;
+  placeCart: (items: CartItem[], instance: OrderInstance, tableNumber: string) => Promise<string>;
   sendEmergency: (kind: EmergencyKind, message: string) => Promise<void>;
   sendAnnouncement: (kind: AnnouncementKind, message: string) => Promise<void>;
   updateEmergency: (id: string, status: EmergencyStatus) => Promise<void>;
@@ -310,11 +311,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     lastMutation.current = Date.now();
   };
 
-  const saveProfile = useCallback(async (displayName: string, image: File | null) => {
+  const saveProfile = useCallback(async (displayName: string) => {
     throttle();
     const uid = user?.uid || localUid;
-    const iconUrl = image ? await uploadImage(image, `users/${uid}`) : profile?.iconUrl;
-    if (!iconUrl) throw new Error('アイコンを選択してください。');
+    const iconUrl = profile?.iconUrl || GUEST_ICON;
     const timestamp = nowIso();
     const next: UserProfile = {
       id: uid, displayName: displayName.trim(), iconUrl,
@@ -328,7 +328,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     }
     cacheProfile(next);
     setProfile(next);
-  }, [localUid, profile?.createdAt, profile?.iconUrl, uploadImage, user?.uid]);
+  }, [localUid, profile?.createdAt, profile?.iconUrl, user?.uid]);
 
   const restoreProfile = useCallback(async (source: UserProfile) => {
     if (runtimeMode !== 'sample' && !user) throw new Error('接続の準備中です。');
@@ -435,7 +435,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [products, requireProfile]);
 
-  const placeCart = useCallback(async (items: CartItem[], tableNumber: string) => {
+  const placeCart = useCallback(async (items: CartItem[], instance: OrderInstance, tableNumber: string) => {
+    if (!validateOrderInstance(instance)) throw new Error('インスタンスを選択してください。');
     const tableError = validateTableNumber(tableNumber);
     if (tableError) throw new Error(tableError);
     throttle();
@@ -445,7 +446,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const cartId = makeId();
     const nextOrders = items.flatMap(({ product, options, quantity }) => Array.from({ length: quantity }, (): OrderWithoutId => {
       const base = {
-        receiptNumber, cartId, tableNumber: tableNumber.trim(),
+        receiptNumber, cartId, instance, tableNumber: tableNumber.trim(),
         productId: product.id, productName: formatProductName(product.name, options), productImageUrl: product.imageUrl,
         orderedBy: current.id, ordererName: current.displayName,
         status: 'pending' as const, createdAt: timestamp, updatedAt: timestamp,

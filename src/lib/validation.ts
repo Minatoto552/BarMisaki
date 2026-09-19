@@ -1,4 +1,4 @@
-import type { CocktailColor, OrderOptions, ProductCategory } from '../types';
+import type { CocktailColor, OrderInstance, OrderOptions, ProductCategory } from '../types';
 import { isTableNumber } from './table-numbers';
 
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -55,3 +55,7 @@ export const validateTableNumber = (value: string): string | null => {
   if (!isTableNumber(normalized)) return 'テーブル番号は1〜18から選択してください。';
   return null;
 };
+
+export const validateOrderInstance = (value: string): value is OrderInstance => (
+  value === 'first' || value === 'second'
+);

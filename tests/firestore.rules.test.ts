@@ -23,6 +23,7 @@ const profile = (uid: string) => ({
 const order = (uid: string, tableNumber = '18') => ({
   receiptNumber: '12345',
   cartId: 'cart-1',
+  instance: 'first',
   tableNumber,
   productId: 'drink-1',
   productName: 'テストドリンク',
@@ -83,6 +84,18 @@ describe('Firestore Security Rules', () => {
     await assertFails(addDoc(collection(alice, 'orders'), order('alice', '0')));
     await assertFails(addDoc(collection(alice, 'orders'), order('alice', '19')));
     await assertFails(addDoc(collection(alice, 'orders'), order('alice', 'A-3')));
+  });
+
+  it('注文には第一または第二インスタンスを必須とする', async () => {
+    await environment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'users/alice'), profile('alice'));
+    });
+    const alice = environment.authenticatedContext('alice').firestore();
+    await assertSucceeds(addDoc(collection(alice, 'orders'), { ...order('alice'), instance: 'second' }));
+    await assertFails(addDoc(collection(alice, 'orders'), { ...order('alice'), instance: 'third' }));
+    const missing = order('alice');
+    Reflect.deleteProperty(missing, 'instance');
+    await assertFails(addDoc(collection(alice, 'orders'), missing));
   });
 
   it('色が不足したノーマルカクテル注文を拒否する', async () => {

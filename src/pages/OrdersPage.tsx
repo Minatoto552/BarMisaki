@@ -20,6 +20,7 @@ import { summarizeOrderItems, getOrderAge } from "../lib/order-presentation";
 import { getCurrentServiceDayStart } from "../lib/service-day";
 import {
   emergencyKindLabels,
+  orderInstanceLabels,
   orderStatusLabels,
   orderStatuses,
   type Emergency,
@@ -208,6 +209,7 @@ export const OrdersPage = () => {
               <div className="order-table-head" role="row">
                 <span role="columnheader">注文番号</span>
                 <span role="columnheader">注文商品</span>
+                <span role="columnheader">インスタンス</span>
                 <span role="columnheader">テーブル</span>
                 <span role="columnheader">担当</span>
                 <span role="columnheader">注文時刻</span>
@@ -346,6 +348,11 @@ const OrderRow = ({
             <b className="order-product-quantity">×{quantity}</b>
           </div>
         ))}
+      </div>
+      <div className="order-table-cell instance-cell" role="cell">
+        <strong>
+          {group.instance ? orderInstanceLabels[group.instance] : "未設定"}
+        </strong>
       </div>
       <div className="order-table-cell table-cell" role="cell">
         <small>TABLE</small>

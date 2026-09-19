@@ -60,7 +60,7 @@ export const EditProductsPage = () => {
       </header>
       {!profile && (
         <p className="product-management-note">
-          変更するには<Link to="/account">名前とアイコンを登録</Link>
+          変更するには<Link to="/account">名前を登録</Link>
           してください。
         </p>
       )}

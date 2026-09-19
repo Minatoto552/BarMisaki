@@ -4,7 +4,7 @@ import type { Order } from '../types';
 import { getOrderGroupStatus, groupOrdersByCart, matchesOrderGroupFilter } from './order-groups';
 
 const makeOrder = (id: string, cartId: string, status: Order['status'], createdAt: string): Order => ({
-  id, cartId, status, createdAt, updatedAt: createdAt, receiptNumber: cartId, tableNumber: '1', orderedBy: 'user-1', ordererName: 'みさき',
+  id, cartId, status, createdAt, updatedAt: createdAt, receiptNumber: cartId, instance: 'first', tableNumber: '1', orderedBy: 'user-1', ordererName: 'みさき',
   productId: `product-${id}`, productName: `商品${id}`, productImageUrl: '/item.png', category: 'juice',
 });
 

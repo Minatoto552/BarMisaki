@@ -31,6 +31,7 @@ import {
   categoryLabels,
   cocktailColors,
   colorLabels,
+  orderInstanceLabels,
   productCategories,
   type OrderOptions,
   type Product,
@@ -121,7 +122,7 @@ export const MenuPage = () => {
   const choose = (product: Product) => {
     if (!profile) {
       navigate("/account", {
-        state: { notice: "注文する前に、名前とアイコンを登録してください。" },
+        state: { notice: "注文する前に、名前を登録してください。" },
       });
       return;
     }
@@ -156,7 +157,10 @@ export const MenuPage = () => {
   };
   const submit = async () => {
     if (sending.current) return;
-    const error = validateTableNumber(cart.table);
+    const instance = cart.instance;
+    const error = !instance
+      ? "インスタンスを選択してください。"
+      : validateTableNumber(cart.table);
     if (error || !cart.quantity) {
       setErrors([error || "商品を追加してください。"]);
       return;
@@ -165,7 +169,8 @@ export const MenuPage = () => {
     setBusy(true);
     setErrors([]);
     try {
-      const number = await placeCart(cart.items, cart.table);
+      if (!instance) return;
+      const number = await placeCart(cart.items, instance, cart.table);
       setReceipt(number);
       cart.clear();
       setReview(false);
@@ -429,7 +434,12 @@ export const MenuPage = () => {
           }}
         >
           <div className="review-table">
-            テーブル <b>{cart.table || "未選択"}</b>
+            <span>
+              インスタンス <b>{cart.instance ? orderInstanceLabels[cart.instance] : "未選択"}</b>
+            </span>
+            <span>
+              テーブル <b>{cart.table || "未選択"}</b>
+            </span>
           </div>
           <div className="review-items">
             {cart.items.map((item) => (
@@ -446,9 +456,9 @@ export const MenuPage = () => {
             <span>合計</span>
             <b>{cart.quantity}点</b>
           </div>
-          {!cart.table && (
+          {(!cart.instance || !cart.table) && (
             <p className="error-list">
-              カートに戻って、テーブル番号を選択してください。
+              カートに戻って、インスタンスとテーブル番号を選択してください。
             </p>
           )}
           {errors.length > 0 && (
@@ -471,7 +481,7 @@ export const MenuPage = () => {
             </button>
             <button
               className="primary-button"
-              disabled={busy || !cart.quantity || !cart.table}
+              disabled={busy || !cart.quantity || !cart.instance || !cart.table}
               onClick={() => void submit()}
             >
               {busy ? "送信中…" : "注文を送信"}

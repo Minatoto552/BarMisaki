@@ -40,16 +40,16 @@ describe('商品データの更新・削除', () => {
   it('名前だけ変更したプロフィールでも既存アイコンを保持する', async () => {
     localStorage.setItem('vrc-order-profile', JSON.stringify({ id: 'user', displayName: 'テスト', iconUrl: '/avatar.png', createdAt: 'created' }));
     const { result } = renderHook(useData, { wrapper: DataProvider });
-    await act(() => result.current.saveProfile('新しい名前', null));
+    await act(() => result.current.saveProfile('新しい名前'));
     expect(result.current.profile).toMatchObject({ displayName: '新しい名前', iconUrl: '/avatar.png', createdAt: 'created' });
   });
 
   it('注文のテーブル番号を1〜18に制限する', async () => {
     const { result } = renderHook(useData, { wrapper: DataProvider });
     const item: CartItem = { id: 'cart-item', product, options: {}, quantity: 1 };
-    await expect(result.current.placeCart([item], '19')).rejects.toThrow('1〜18');
-    await act(() => result.current.placeCart([item], '18'));
-    expect(result.current.orders[0]).toMatchObject({ tableNumber: '18', productName: product.name });
+    await expect(result.current.placeCart([item], 'first', '19')).rejects.toThrow('1〜18');
+    await act(() => result.current.placeCart([item], 'second', '18'));
+    expect(result.current.orders[0]).toMatchObject({ instance: 'second', tableNumber: '18', productName: product.name });
   });
 
   it('画像と登録者を維持し、別カテゴリーへ変更したらレシピを除く', async () => {

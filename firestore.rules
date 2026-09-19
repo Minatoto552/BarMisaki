@@ -49,20 +49,21 @@ service cloud.firestore {
         && request.resource.data.orderedBy == request.auth.uid
         && request.resource.data.status == 'pending'
         && shortString(request.resource.data.cartId, 80)
+        && request.resource.data.instance in ['first', 'second']
         && request.resource.data.tableNumber in ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18']
         && request.resource.data.category in ['normal_cocktail', 'original_cocktail', 'juice', 'food']
         && shortString(request.resource.data.productName, 60)
         && (
           (request.resource.data.category == 'normal_cocktail'
-            && request.resource.data.keys().hasOnly(['receiptNumber', 'cartId', 'tableNumber', 'productId', 'productName', 'productImageUrl', 'category', 'orderedBy', 'ordererName', 'status', 'createdAt', 'updatedAt', 'color1', 'color2', 'carbonated', 'aphrodisiac'])
+            && request.resource.data.keys().hasOnly(['receiptNumber', 'cartId', 'instance', 'tableNumber', 'productId', 'productName', 'productImageUrl', 'category', 'orderedBy', 'ordererName', 'status', 'createdAt', 'updatedAt', 'color1', 'color2', 'carbonated', 'aphrodisiac'])
             && request.resource.data.color1 in ['red', 'blue', 'green', 'white', 'black']
             && request.resource.data.color2 in ['red', 'blue', 'green', 'white', 'black']
             && request.resource.data.carbonated is bool && request.resource.data.aphrodisiac is bool)
           || (request.resource.data.category == 'original_cocktail'
-            && request.resource.data.keys().hasOnly(['receiptNumber', 'cartId', 'tableNumber', 'productId', 'productName', 'productImageUrl', 'category', 'orderedBy', 'ordererName', 'status', 'createdAt', 'updatedAt', 'recipe'])
+            && request.resource.data.keys().hasOnly(['receiptNumber', 'cartId', 'instance', 'tableNumber', 'productId', 'productName', 'productImageUrl', 'category', 'orderedBy', 'ordererName', 'status', 'createdAt', 'updatedAt', 'recipe'])
             && shortString(request.resource.data.recipe, 2000))
           || (request.resource.data.category in ['juice', 'food']
-            && request.resource.data.keys().hasOnly(['receiptNumber', 'cartId', 'tableNumber', 'productId', 'productName', 'productImageUrl', 'category', 'orderedBy', 'ordererName', 'status', 'createdAt', 'updatedAt']))
+            && request.resource.data.keys().hasOnly(['receiptNumber', 'cartId', 'instance', 'tableNumber', 'productId', 'productName', 'productImageUrl', 'category', 'orderedBy', 'ordererName', 'status', 'createdAt', 'updatedAt']))
         );
       allow update: if staff()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
