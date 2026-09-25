@@ -17,6 +17,7 @@ import {
   playAnnouncementSound,
 } from "../lib/notification-sounds";
 import { getCurrentServiceDayStart } from "../lib/service-day";
+import { getOrderNotificationKey } from "../lib/order-notifications";
 import { EmergencySystem } from "./EmergencySystem";
 import { AnnouncementToast } from "./AnnouncementToast";
 import { NotificationDrawer } from "./NotificationDrawer";
@@ -75,7 +76,7 @@ export const AppShell = () => {
   useEffect(() => {
     const fresh = new Set<string>();
     orders.forEach((order) => {
-      const key = order.cartId || order.id;
+      const key = getOrderNotificationKey(order);
       if (
         !seenOrders.current.has(key) &&
         new Date(order.createdAt).getTime() >= started.current &&
@@ -83,7 +84,9 @@ export const AppShell = () => {
       )
         fresh.add(key);
     });
-    orders.forEach((order) => seenOrders.current.add(order.cartId || order.id));
+    orders.forEach((order) =>
+      seenOrders.current.add(getOrderNotificationKey(order)),
+    );
     if (fresh.size && isStaff) {
       setNewNotice(`新しい注文が${fresh.size}件届きました`);
       playAnnouncementSound();
