@@ -27,12 +27,15 @@ service cloud.firestore {
       allow read: if true;
       allow create: if profileExists()
         && request.resource.data.createdBy == request.auth.uid
-        && request.resource.data.category in ['normal_cocktail', 'original_cocktail', 'juice', 'food']
+        && request.resource.data.category in ['normal_cocktail', 'original_cocktail', 'juice', 'food', 'halloween']
         && shortString(request.resource.data.name, 60)
         && request.resource.data.imageUrl is string && request.resource.data.imageUrl.size() <= 320000
         && request.resource.data.isAvailable is bool
         && (
           (request.resource.data.category == 'original_cocktail'
+            && request.resource.data.keys().hasOnly(['name', 'imageUrl', 'category', 'recipe', 'createdBy', 'creatorName', 'isAvailable', 'createdAt', 'updatedAt'])
+            && shortString(request.resource.data.recipe, 2000))
+          || (request.resource.data.category == 'halloween'
             && request.resource.data.keys().hasOnly(['name', 'imageUrl', 'category', 'recipe', 'createdBy', 'creatorName', 'isAvailable', 'createdAt', 'updatedAt'])
             && shortString(request.resource.data.recipe, 2000))
           || (request.resource.data.category != 'original_cocktail'
@@ -51,7 +54,7 @@ service cloud.firestore {
         && shortString(request.resource.data.cartId, 80)
         && request.resource.data.instance in ['first', 'second']
         && request.resource.data.tableNumber in ['1', '2', '3', '4', '5', '6', '7', '8']
-        && request.resource.data.category in ['normal_cocktail', 'original_cocktail', 'juice', 'food']
+        && request.resource.data.category in ['normal_cocktail', 'original_cocktail', 'juice', 'food', 'halloween']
         && shortString(request.resource.data.productName, 60)
         && (
           (request.resource.data.category == 'normal_cocktail'
@@ -62,7 +65,10 @@ service cloud.firestore {
           || (request.resource.data.category == 'original_cocktail'
             && request.resource.data.keys().hasOnly(['receiptNumber', 'cartId', 'instance', 'tableNumber', 'productId', 'productName', 'productImageUrl', 'category', 'orderedBy', 'ordererName', 'status', 'createdAt', 'updatedAt', 'recipe'])
             && shortString(request.resource.data.recipe, 2000))
-          || (request.resource.data.category in ['juice', 'food']
+          || (request.resource.data.category == 'halloween'
+            && request.resource.data.keys().hasOnly(['receiptNumber', 'cartId', 'instance', 'tableNumber', 'productId', 'productName', 'productImageUrl', 'category', 'orderedBy', 'ordererName', 'status', 'createdAt', 'updatedAt', 'recipe'])
+            && shortString(request.resource.data.recipe, 2000))
+          || (request.resource.data.category in ['juice', 'food', 'halloween']
             && request.resource.data.keys().hasOnly(['receiptNumber', 'cartId', 'instance', 'tableNumber', 'productId', 'productName', 'productImageUrl', 'category', 'orderedBy', 'ordererName', 'status', 'createdAt', 'updatedAt']))
         );
       allow update: if staff()

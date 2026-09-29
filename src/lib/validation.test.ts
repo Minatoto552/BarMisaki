@@ -39,6 +39,8 @@ describe('商品登録', () => {
     expect(validateProduct('original_cocktail', '星空', image, '')).toContain('オリジナルカクテルのレシピを入力してください。');
     expect(validateProduct('food', 'サンド', image, '')).toEqual([]);
     expect(validateProduct('juice', 'オレンジジュース', image, '')).toEqual([]);
+    expect(validateProduct('halloween', 'ハロウィン限定商品', image, '')).toEqual([]);
+    expect(validateProduct('halloween', 'ハロウィン限定商品', image, 'かぼちゃ 50g')).toEqual([]);
   });
 });
 

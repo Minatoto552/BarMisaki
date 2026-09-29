@@ -34,6 +34,8 @@ export const validateProduct = (
     const recipeLength = [...recipe.trim()].length;
     if (recipeLength === 0) errors.push('オリジナルカクテルのレシピを入力してください。');
     if (recipeLength > 2000) errors.push('レシピは2000文字以内で入力してください。');
+  } else if (category === 'halloween' && [...recipe.trim()].length > 2000) {
+    errors.push('レシピは2000文字以内で入力してください。');
   }
   return errors;
 };

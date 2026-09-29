@@ -285,7 +285,7 @@ export const OrdersPage = () => {
           </div>
         )}
       </section>
-      {recipe?.category === "original_cocktail" && (
+      {(recipe?.category === "original_cocktail" || recipe?.category === "halloween") && (
         <RecipeViewer order={recipe} onClose={() => setRecipe(null)} />
       )}
       {detail && (
@@ -382,7 +382,7 @@ const OrderRow = ({
               {order.category === "normal_cocktail" && (
                 <OptionSummary options={order} />
               )}
-              {order.category === "original_cocktail" && (
+              {(order.category === "original_cocktail" || order.category === "halloween") && (
                 <button
                   className="recipe-button"
                   onClick={() => onRecipe(order)}

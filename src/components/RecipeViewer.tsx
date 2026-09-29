@@ -1,11 +1,11 @@
 import { Minus, Plus } from 'lucide-react';
 import { useState } from 'react';
 
-import type { OriginalCocktailOrder } from '../types';
+import type { HalloweenOrder, OriginalCocktailOrder } from '../types';
 import { orderInstanceLabels } from '../types';
 import { Modal } from './Modal';
 
-export const RecipeViewer = ({ order, onClose }: { order: OriginalCocktailOrder; onClose: () => void }) => {
+export const RecipeViewer = ({ order, onClose }: { order: OriginalCocktailOrder | HalloweenOrder; onClose: () => void }) => {
   const [fontSize, setFontSize] = useState(28);
   const [failedImage, setFailedImage] = useState<string | null>(null);
   return <Modal title={`${order.productName}のレシピ`} onClose={onClose} fullScreen>

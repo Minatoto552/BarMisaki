@@ -23,10 +23,12 @@ import type {
   OriginalCocktailProduct,
   JuiceProduct,
   FoodProduct,
+  HalloweenProduct,
   NormalCocktailOrder,
   OriginalCocktailOrder,
   JuiceOrder,
   FoodOrder,
+  HalloweenOrder,
   UserProfile,
   CartItem,
   Announcement,
@@ -44,12 +46,19 @@ interface ProductDraft {
   image: File | null;
 }
 
+const withOptionalHalloweenRecipe = <T extends { category: ProductCategory }>(
+  value: T,
+  recipe: string,
+) => value.category === 'halloween' && recipe.trim()
+  ? { ...value, recipe: recipe.trim() }
+  : value;
+
 export interface ProductEditDraft extends Omit<ProductDraft, 'image'> {
   image: File | null;
 }
 
-type ProductWithoutId = Omit<NormalCocktailProduct, 'id'> | Omit<OriginalCocktailProduct, 'id'> | Omit<JuiceProduct, 'id'> | Omit<FoodProduct, 'id'>;
-type OrderWithoutId = Omit<NormalCocktailOrder, 'id'> | Omit<OriginalCocktailOrder, 'id'> | Omit<JuiceOrder, 'id'> | Omit<FoodOrder, 'id'>;
+type ProductWithoutId = Omit<NormalCocktailProduct, 'id'> | Omit<OriginalCocktailProduct, 'id'> | Omit<JuiceProduct, 'id'> | Omit<FoodProduct, 'id'> | Omit<HalloweenProduct, 'id'>;
+type OrderWithoutId = Omit<NormalCocktailOrder, 'id'> | Omit<OriginalCocktailOrder, 'id'> | Omit<JuiceOrder, 'id'> | Omit<FoodOrder, 'id'> | Omit<HalloweenOrder, 'id'>;
 
 interface DataContextValue {
   ready: boolean;
@@ -355,7 +364,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     };
     const next: ProductWithoutId = draft.category === 'original_cocktail'
       ? { ...base, category: draft.category, recipe: draft.recipe.trim() }
-      : { ...base, category: draft.category };
+      : withOptionalHalloweenRecipe({ ...base, category: draft.category }, draft.recipe);
     const { db, firestoreApi } = await getFirebaseServices();
     if (db && firestoreApi) {
       await firestoreApi.addDoc(firestoreApi.collection(db, 'products'), next);
@@ -386,7 +395,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         // Update only editable fields. Never recreate a deleted item or overwrite its creator.
         transaction.update(productRef, {
           ...changes,
-          recipe: draft.category === 'original_cocktail' ? draft.recipe.trim() : firestoreApi.deleteField(),
+          recipe: draft.category === 'original_cocktail' || (draft.category === 'halloween' && draft.recipe.trim())
+            ? draft.recipe.trim()
+            : firestoreApi.deleteField(),
         });
       });
     } else {
@@ -396,7 +407,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         if (product.id !== id) return product;
         const { id: productId, imageUrl: previousImage, createdBy, creatorName, isAvailable, createdAt } = product;
         const base = { id: productId, imageUrl: imageUrl || previousImage, createdBy, creatorName, isAvailable, createdAt, ...changes };
-        return draft.category === 'original_cocktail' ? { ...base, category: draft.category, recipe: draft.recipe.trim() } : { ...base, category: draft.category };
+        return draft.category === 'original_cocktail'
+          ? { ...base, category: draft.category, recipe: draft.recipe.trim() }
+          : withOptionalHalloweenRecipe({ ...base, category: draft.category }, draft.recipe);
       }));
     }
   }, [products, requireProfile, uploadImage]);
@@ -411,7 +424,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const imageUrl = draft.image ? await uploadImage(draft.image, `products/${current.id}`) : source!.imageUrl;
     const timestamp = nowIso();
     const base = { name: draft.name.trim(), imageUrl, createdBy: current.id, creatorName: current.displayName, isAvailable: true, createdAt: timestamp, updatedAt: timestamp };
-    const next: ProductWithoutId = draft.category === 'original_cocktail' ? { ...base, category: draft.category, recipe: draft.recipe.trim() } : { ...base, category: draft.category };
+    const next: ProductWithoutId = draft.category === 'original_cocktail'
+      ? { ...base, category: draft.category, recipe: draft.recipe.trim() }
+      : withOptionalHalloweenRecipe({ ...base, category: draft.category }, draft.recipe);
     const { db, firestoreApi } = await getFirebaseServices();
     if (db && firestoreApi) await firestoreApi.addDoc(firestoreApi.collection(db, 'products'), next);
     else writeJson(KEYS.products, [{ id: makeId(), ...next }, ...products]);
@@ -458,6 +473,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         };
       }
       if (product.category === 'original_cocktail') return { ...base, category: product.category, recipe: product.recipe };
+      if (product.category === 'halloween' && product.recipe) return { ...base, category: product.category, recipe: product.recipe };
       return { ...base, category: product.category };
     }));
     const { db, firestoreApi } = await getFirebaseServices();

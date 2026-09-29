@@ -11,7 +11,7 @@ export const summarizeOrderItems = (orders: Order[]) => {
       order.productName,
       order.productImageUrl,
       order.category,
-      order.category === "original_cocktail" ? order.recipe : "",
+      order.category === "original_cocktail" || order.category === "halloween" ? order.recipe || "" : "",
       ...options,
     ]);
     const existing = lines.get(key);

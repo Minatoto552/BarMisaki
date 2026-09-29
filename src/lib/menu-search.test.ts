@@ -7,6 +7,7 @@ const products: Product[] = [
   { id: 'normal', category: 'normal_cocktail', name: 'カラーツイン', imageUrl: '', createdBy: '', creatorName: '', isAvailable: true, createdAt: '', updatedAt: '' },
   { id: 'original', category: 'original_cocktail', name: '月灯りのクリームソーダ', recipe: '', imageUrl: '', createdBy: '', creatorName: '', isAvailable: true, createdAt: '', updatedAt: '' },
   { id: 'juice', category: 'juice', name: 'ＡＰＰＬＥ　ＪＵＩＣＥ', imageUrl: '', createdBy: '', creatorName: '', isAvailable: true, createdAt: '', updatedAt: '' },
+  { id: 'halloween', category: 'halloween', name: 'パンプキンパイ', imageUrl: '', createdBy: '', creatorName: '', isAvailable: true, createdAt: '', updatedAt: '' },
 ];
 
 describe('filterMenuProducts', () => {
@@ -16,6 +17,10 @@ describe('filterMenuProducts', () => {
 
   it('入力時は全カテゴリーから検索する', () => {
     expect(filterMenuProducts(products, 'normal_cocktail', '月灯り')).toEqual([products[1]]);
+  });
+
+  it('ハロウィンカテゴリーだけを絞り込める', () => {
+    expect(filterMenuProducts(products, 'halloween', '')).toEqual([products[3]]);
   });
 
   it('全角半角と大文字小文字を正規化する', () => {

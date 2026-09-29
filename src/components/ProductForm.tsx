@@ -32,7 +32,9 @@ export const ProductForm = ({
     product?.category || "original_cocktail",
   );
   const [recipe, setRecipe] = useState(
-    product?.category === "original_cocktail" ? product.recipe : "",
+    product?.category === "original_cocktail" || product?.category === "halloween"
+      ? product.recipe || ""
+      : "",
   );
   const [image, setImage] = useState<File | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
@@ -114,10 +116,10 @@ export const ProductForm = ({
               </button>
             )}
           </div>
-          {category === "original_cocktail" && (
+          {(category === "original_cocktail" || category === "halloween") && (
             <label className="field">
               <span>
-                レシピ <b>必須</b>
+                レシピ {category === "original_cocktail" ? <b>必須</b> : <small>任意</small>}
               </span>
               <textarea
                 value={recipe}

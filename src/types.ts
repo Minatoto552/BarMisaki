@@ -1,4 +1,4 @@
-export const productCategories = ['normal_cocktail', 'original_cocktail', 'juice', 'food'] as const;
+export const productCategories = ['normal_cocktail', 'original_cocktail', 'juice', 'food', 'halloween'] as const;
 export const cocktailColors = ['red', 'blue', 'green', 'white', 'black'] as const;
 export const orderStatuses = ['pending', 'preparing', 'completed'] as const;
 export const emergencyKinds = ['help', 'medical', 'trouble', 'other'] as const;
@@ -51,7 +51,12 @@ export interface JuiceProduct extends ProductBase {
   category: 'juice';
 }
 
-export type Product = NormalCocktailProduct | OriginalCocktailProduct | JuiceProduct | FoodProduct;
+export interface HalloweenProduct extends ProductBase {
+  category: 'halloween';
+  recipe?: string;
+}
+
+export type Product = NormalCocktailProduct | OriginalCocktailProduct | JuiceProduct | FoodProduct | HalloweenProduct;
 
 interface OrderBase {
   id: string;
@@ -90,7 +95,12 @@ export interface JuiceOrder extends OrderBase {
   category: 'juice';
 }
 
-export type Order = NormalCocktailOrder | OriginalCocktailOrder | JuiceOrder | FoodOrder;
+export interface HalloweenOrder extends OrderBase {
+  category: 'halloween';
+  recipe?: string;
+}
+
+export type Order = NormalCocktailOrder | OriginalCocktailOrder | JuiceOrder | FoodOrder | HalloweenOrder;
 
 export interface Emergency {
   id: string;
@@ -134,6 +144,7 @@ export const categoryLabels: Record<ProductCategory, string> = {
   original_cocktail: 'オリジナルカクテル',
   juice: 'ジュース',
   food: 'フード',
+  halloween: 'ハロウィン',
 };
 
 export const colorLabels: Record<CocktailColor, string> = {
