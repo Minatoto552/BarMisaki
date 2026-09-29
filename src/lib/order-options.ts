@@ -4,7 +4,11 @@ import {
   type OrderOptions,
 } from '../types';
 
-const temperatureProductNames = new Set(['抹茶ラテ', 'いちごみるく']);
+const temperatureProductNames = new Set([
+  '抹茶ラテ',
+  'いちごみるく',
+  'パンプキンラテ',
+]);
 
 const normalizeProductName = (name: string) => name.trim().normalize('NFKC');
 

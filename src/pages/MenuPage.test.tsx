@@ -41,6 +41,13 @@ vi.mock("../lib/data", () => ({
         imageUrl: "/strawberry.png",
         isAvailable: true,
       },
+      {
+        id: "pumpkin-latte",
+        name: "パンプキンラテ",
+        category: "juice",
+        imageUrl: "/pumpkin.png",
+        isAvailable: true,
+      },
     ],
   }),
 }));
@@ -235,5 +242,22 @@ describe("POS注文フロー", () => {
         "1",
       ),
     );
+  });
+
+  it("パンプキンラテはホット・アイスを選択して追加できる", () => {
+    open();
+    fireEvent.click(
+      screen.getByRole("button", { name: "パンプキンラテの温度を選択" }),
+    );
+    const dialog = within(screen.getByRole("dialog"));
+    expect(dialog.getByRole("button", { name: "ホット" })).toBeInTheDocument();
+    expect(dialog.getByRole("button", { name: "アイス" })).toBeInTheDocument();
+    fireEvent.click(dialog.getByRole("button", { name: "ホット" }));
+    fireEvent.click(dialog.getByRole("button", { name: "カートに追加" }));
+    expect(
+      within(screen.getByRole("region", { name: "現在の注文内容" })).getByText(
+        "パンプキンラテ（ホット）",
+      ),
+    ).toBeInTheDocument();
   });
 });
